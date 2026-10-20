@@ -1,0 +1,57 @@
+# Machines: a machine that stops sending, and one running out of disk,
+# memory or CPU. Mimir evaluates them every minute over what the Prometheus
+# node exporter or Alloy's unix exporter sends, one series set per machine
+# (instance), the same metrics as the Machines dashboard (nodes/).
+thresholds:
+  silent_for:
+    default: 5m
+    description: How long a machine that was sending may send nothing before it alerts.
+  disk_percent:
+    default: 90
+    description: How full a machine's disk may get, in percent, before it alerts.
+  memory_percent:
+    default: 90
+    description: How much of a machine's memory may be in use, in percent, before it alerts.
+  cpu_percent:
+    default: 90
+    description: How busy a machine's CPUs may be on average, in percent, for 15 minutes before it alerts.
+groups:
+  - name: machines
+    interval: 1m
+    rules:
+      # Sent within the last hour, but not now: a machine never seen does not
+      # alert, and one gone for good stops alerting after an hour.
+      - alert: MachineSilent
+        expr: max by (instance) (max_over_time(node_uname_info[1h])) unless on (instance) max by (instance) (node_uname_info)
+        for: ${silent_for}
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.instance }} stopped sending"
+          description: "Nothing has arrived from {{ $labels.instance }} for at least ${silent_for}: the machine, or the agent on it, is down or cannot reach Telopi."
+      # Disks of the machine itself: not memory, image layers, or shares
+      # mounted from elsewhere (network, or a host folder in a VM or container).
+      - alert: DiskAlmostFull
+        expr: 100 * (1 - max by (instance, mountpoint) (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs|ramfs|9p|nfs.*|cifs|smb.*|fuse.*|virtiofs"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs|ramfs|9p|nfs.*|cifs|smb.*|fuse.*|virtiofs"})) > ${disk_percent}
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.mountpoint }} on {{ $labels.instance }} is {{ $value | printf \"%.0f\" }}% full"
+          description: "The disk has been over ${disk_percent}% full for 15 minutes. Free space, or grow the disk, before writes fail."
+      - alert: MemoryAlmostFull
+        expr: 100 * (1 - max by (instance) (node_memory_MemAvailable_bytes) / max by (instance) (node_memory_MemTotal_bytes)) > ${memory_percent}
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} uses {{ $value | printf \"%.0f\" }}% of its memory"
+          description: "Over ${memory_percent}% of the memory has been in use for 15 minutes; the system may start killing processes."
+      - alert: CPUBusy
+        expr: 100 * (1 - avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m]))) > ${cpu_percent}
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }}'s CPUs are {{ $value | printf \"%.0f\" }}% busy"
+          description: "The CPUs have been over ${cpu_percent}% busy on average for 15 minutes."
