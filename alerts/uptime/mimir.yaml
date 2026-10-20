@@ -1,0 +1,30 @@
+# Uptime: a checked site that stops answering, and a certificate about to
+# expire. Mimir evaluates them every minute over the uptime probes, which
+# label each site with its company name and its address (instance).
+thresholds:
+  down_for:
+    default: 3m
+    description: How long every check of a site must fail before it alerts.
+  certificate_days:
+    default: 14
+    description: How many days before a site's certificate expires it alerts.
+groups:
+  - name: uptime
+    interval: 1m
+    rules:
+      - alert: SiteDown
+        expr: max by (company, instance) (probe_success) == 0
+        for: ${down_for}
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.instance }} is down"
+          description: "Every check of {{ $labels.instance }} ({{ $labels.company }}) has failed for at least ${down_for}."
+      - alert: CertificateExpiresSoon
+        expr: min by (company, instance) (probe_ssl_earliest_cert_expiry - time()) < ${certificate_days} * 86400
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "The certificate of {{ $labels.instance }} expires in {{ $value | humanizeDuration }}"
+          description: "Renew it before it expires: browsers then refuse the site."

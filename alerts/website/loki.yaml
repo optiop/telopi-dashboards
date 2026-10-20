@@ -1,0 +1,58 @@
+# Website: JavaScript errors, and Core Web Vitals turning poor, from the
+# browser telemetry a tenant's sites send (Faro, {source="faro"}), read as
+# the Website dashboard reads it. Loki evaluates them every minute. A web
+# vital needs 20 measurements in the hour, so one slow visit is no alert.
+thresholds:
+  js_errors:
+    default: 20
+    description: How many JavaScript errors in 5 minutes, across your sites, raise an alert.
+  lcp_ms:
+    default: 4000
+    description: The 75th percentile of Largest Contentful Paint over the last hour, in milliseconds, above which it alerts (Google calls over 4000 poor).
+  inp_ms:
+    default: 500
+    description: The 75th percentile of Interaction to Next Paint over the last hour, in milliseconds, above which it alerts (Google calls over 500 poor).
+  cls:
+    default: 0.25
+    description: The 75th percentile of Cumulative Layout Shift over the last hour above which it alerts (Google calls over 0.25 poor).
+groups:
+  - name: website
+    interval: 1m
+    rules:
+      - alert: JavaScriptErrors
+        expr: sum(count_over_time({source="faro"} |= "kind=exception" | logfmt | kind="exception" [5m])) > ${js_errors}
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $value }} JavaScript errors in 5 minutes"
+          description: "Your sites' visitors hit more than ${js_errors} JavaScript errors in the last 5 minutes. The Website dashboard lists the pages."
+      - alert: SlowLargestContentfulPaint
+        expr: |
+          quantile_over_time(0.75, {source="faro"} |= "kind=measurement" | logfmt | type="web-vitals" | lcp!="" | unwrap lcp | __error__="" [1h]) by () > ${lcp_ms}
+          and on () sum(count_over_time({source="faro"} |= "kind=measurement" | logfmt | type="web-vitals" | lcp!="" [1h])) >= 20
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Pages take {{ $value | printf \"%.0f\" }} ms to show their main content"
+          description: "The 75th percentile of Largest Contentful Paint over the last hour is above ${lcp_ms} ms."
+      - alert: SlowInteraction
+        expr: |
+          quantile_over_time(0.75, {source="faro"} |= "kind=measurement" | logfmt | type="web-vitals" | inp!="" | unwrap inp | __error__="" [1h]) by () > ${inp_ms}
+          and on () sum(count_over_time({source="faro"} |= "kind=measurement" | logfmt | type="web-vitals" | inp!="" [1h])) >= 20
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Pages take {{ $value | printf \"%.0f\" }} ms to answer a click or a key"
+          description: "The 75th percentile of Interaction to Next Paint over the last hour is above ${inp_ms} ms."
+      - alert: LayoutShift
+        expr: |
+          quantile_over_time(0.75, {source="faro"} |= "kind=measurement" | logfmt | type="web-vitals" | cls!="" | unwrap cls | __error__="" [1h]) by () > ${cls}
+          and on () sum(count_over_time({source="faro"} |= "kind=measurement" | logfmt | type="web-vitals" | cls!="" [1h])) >= 20
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Pages move under the visitor: layout shift {{ $value | printf \"%.2f\" }}"
+          description: "The 75th percentile of Cumulative Layout Shift over the last hour is above ${cls}."
