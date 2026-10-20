@@ -89,7 +89,9 @@ def promtool_problems(rel, text, promtool):
     with tempfile.TemporaryDirectory() as d:
         path = pathlib.Path(d) / "rules.yaml"
         path.write_text(yaml.safe_dump({"groups": rendered_groups(text)}, sort_keys=False))
-        # A promtool in a container mounts {dir} at /rules.
+        # A promtool in a container mounts {dir} at /rules, and runs as nobody.
+        pathlib.Path(d).chmod(0o755)
+        path.chmod(0o644)
         inside = "/rules/rules.yaml" if "{dir}" in promtool else str(path)
         cmd = [part.replace("{dir}", d) for part in shlex.split(promtool)] + ["check", "rules", inside]
         res = subprocess.run(cmd, capture_output=True, text=True)
