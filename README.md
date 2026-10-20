@@ -83,6 +83,7 @@ browser telemetry).
 | [`website/`](alerts/website/loki.yaml) | JavaScript errors; Largest Contentful Paint, Interaction to Next Paint or Cumulative Layout Shift turning poor |
 | [`traces/`](alerts/traces/mimir.yaml) | A service failing its requests, or slow |
 | [`logs/`](alerts/logs/loki.yaml) | A service logging many errors |
+| [`machines/`](alerts/machines/mimir.yaml) | A machine that stopped sending; its disk, memory or CPU nearly used up |
 
 Not connected yet: the platform's reconciler, which writes each set into each
 customer's rulers every five minutes, in a namespace of its own (`telopi`),
