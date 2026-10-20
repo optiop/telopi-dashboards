@@ -1,0 +1,1426 @@
+{
+  "uid": "gaas-website",
+  "title": "Website",
+  "description": "What visitors' browsers report about this website: traffic, speed, errors. Sent by the Grafana Faro Web SDK snippet on the site's pages.",
+  "tags": [
+    "gaas",
+    "website"
+  ],
+  "timezone": "browser",
+  "editable": true,
+  "graphTooltip": 1,
+  "schemaVersion": 41,
+  "version": 1,
+  "refresh": "5m",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": []
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Overview",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Page loads",
+      "description": "Full page loads in the selected time range.",
+      "datasource": {
+        "type": "loki",
+        "uid": "gaas-loki"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 1
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "gaas-loki"
+          },
+          "expr": "sum(count_over_time({source=\"faro\"} |= \"faro.performance.navigation\" | logfmt | event_name=\"faro.performance.navigation\" [$__range]))",
+          "refId": "A",
+          "queryType": "instant"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Sessions",
+      "description": "Distinct browser sessions. A session is one browser tab: the same person in two tabs, or coming back hours later, counts as more than one.",
+      "datasource": {
+        "type": "loki",
+        "uid": "gaas-loki"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 1
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "gaas-loki"
+          },
+          "expr": "count(sum by (session_id) (count_over_time({source=\"faro\"} | logfmt | session_id!=\"\" [$__range]))) or vector(0)",
+          "refId": "A",
+          "queryType": "instant"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "JavaScript errors",
+      "description": "Uncaught errors and console errors in visitors' browsers.",
+      "datasource": {
+        "type": "loki",
+        "uid": "gaas-loki"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 1
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "gaas-loki"
+          },
+          "expr": "sum(count_over_time({source=\"faro\"} |= \"kind=exception\" | logfmt | kind=\"exception\" [$__range])) or vector(0)",
+          "refId": "A",
+          "queryType": "instant"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Pages with an error",
+      "description": "",
+      "datasource": {
+        "type": "loki",
+        "uid": "gaas-loki"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 1
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "gaas-loki"
+          },
+          "expr": "count(sum by (page_url) (count_over_time({source=\"faro\"} |= \"kind=exception\" | logfmt | kind=\"exception\" [$__range]))) or vector(0)",
+          "refId": "A",
+          "queryType": "instant"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Median page load",
+      "description": "Half of all page loads finished faster than this.",
+      "datasource": {
+        "type": "loki",
+        "uid": "gaas-loki"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 1
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "gaas-loki"
+          },
+          "expr": "quantile_over_time(0.5, {source=\"faro\"} |= \"faro.performance.navigation\" | logfmt | event_name=\"faro.performance.navigation\" | unwrap event_data_pageLoadTime | __error__=\"\" [$__range]) by ()",
+          "refId": "A",
+          "queryType": "instant"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 2500
+              },
+              {
+                "color": "red",
+                "value": 5000
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Sessions from AI assistants",
+      "description": "Sessions that began with a link from an AI assistant such as ChatGPT or Perplexity. The assistants' own crawlers do not run JavaScript and are not counted here.",
+      "datasource": {
+        "type": "loki",
+        "uid": "gaas-loki"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 1
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "gaas-loki"
+          },
+          "expr": "count(sum by (session_id) (count_over_time({source=\"faro\"} |= \"event_name=referrer\" | logfmt | event_name=\"referrer\" | event_data_host=~\"(.+\\\\.)?(chatgpt\\\\.com|openai\\\\.com|perplexity\\\\.ai|claude\\\\.ai|gemini\\\\.google\\\\.com|copilot\\\\.microsoft\\\\.com|you\\\\.com|phind\\\\.com|deepseek\\\\.com|meta\\\\.ai)\" [$__range]))) or vector(0)",
+          "refId": "A",
+          "queryType": "instant"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Page loads over time",
+      "description": "",
+      "datasource": {
+        "type": "loki",
+        "uid": "gaas-loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 16,
+        "x": 0,
+        "y": 5
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "gaas-loki"
+          },
+          "expr": "sum(count_over_time({source=\"faro\"} |= \"faro.performance.navigation\" | logfmt | event_name=\"faro.performance.navigation\" [$__interval]))",
+          "refId": "A",
+          "queryType": "range",
+          "legendFormat": "Page loads"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 60,
+            "showPoints": "never",
+            "spanNulls": true
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Errors over time",
+      "description": "",
+      "datasource": {
+        "type": "loki",
+        "uid": "gaas-loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 5
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "gaas-loki"
+          },
+          "expr": "sum(count_over_time({source=\"faro\"} |= \"kind=exception\" | logfmt | kind=\"exception\" [$__interval]))",
+          "refId": "A",
+          "queryType": "range",
+          "legendFormat": "Errors"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 60,
+            "showPoints": "never",
+            "spanNulls": true
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 10,
+      "type": "row",
+      "title": "Speed as visitors feel it (Core Web Vitals, 75th percentile)",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 13
+      }
+    },
+    {
+      "id": 11,
+      "type": "stat",
+      "title": "Largest contentful paint",
+      "description": "How long until the main content is visible. Good: under 2.5 s.",
+      "datasource": {
+        "type": "loki",
+        "uid": "gaas-loki"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 14
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "gaas-loki"
+          },
+          "expr": "quantile_over_time(0.75, {source=\"faro\"} |= \"kind=measurement\" | logfmt | type=\"web-vitals\" | lcp!=\"\" | unwrap lcp | __error__=\"\" [$__range]) by ()",
+          "refId": "A",
+          "queryType": "instant"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 2500
+              },
+              {
+                "color": "red",
+                "value": 4000
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 12,
+      "type": "stat",
+      "title": "First contentful paint",
+      "description": "How long until anything is visible. Good: under 1.8 s.",
+      "datasource": {
+        "type": "loki",
+        "uid": "gaas-loki"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 14
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "gaas-loki"
+          },
+          "expr": "quantile_over_time(0.75, {source=\"faro\"} |= \"kind=measurement\" | logfmt | type=\"web-vitals\" | fcp!=\"\" | unwrap fcp | __error__=\"\" [$__range]) by ()",
+          "refId": "A",
+          "queryType": "instant"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1800
+              },
+              {
+                "color": "red",
+                "value": 3000
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 13,
+      "type": "stat",
+      "title": "Time to first byte",
+      "description": "How long the server takes to start answering. Good: under 0.8 s.",
+      "datasource": {
+        "type": "loki",
+        "uid": "gaas-loki"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 14
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "gaas-loki"
+          },
+          "expr": "quantile_over_time(0.75, {source=\"faro\"} |= \"kind=measurement\" | logfmt | type=\"web-vitals\" | ttfb!=\"\" | unwrap ttfb | __error__=\"\" [$__range]) by ()",
+          "refId": "A",
+          "queryType": "instant"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 800
+              },
+              {
+                "color": "red",
+                "value": 1800
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 14,
+      "type": "stat",
+      "title": "Layout shift",
+      "description": "How much the page jumps around while loading. Good: under 0.1.",
+      "datasource": {
+        "type": "loki",
+        "uid": "gaas-loki"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 14
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "gaas-loki"
+          },
+          "expr": "quantile_over_time(0.75, {source=\"faro\"} |= \"kind=measurement\" | logfmt | type=\"web-vitals\" | cls!=\"\" | unwrap cls | __error__=\"\" [$__range]) by ()",
+          "refId": "A",
+          "queryType": "instant"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.1
+              },
+              {
+                "color": "red",
+                "value": 0.25
+              }
+            ]
+          },
+          "decimals": 3
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 15,
+      "type": "stat",
+      "title": "Interaction delay",
+      "description": "How long the page takes to react to a click or key press. Good: under 200 ms. Empty until visitors interact with the page.",
+      "datasource": {
+        "type": "loki",
+        "uid": "gaas-loki"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 14
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "gaas-loki"
+          },
+          "expr": "quantile_over_time(0.75, {source=\"faro\"} |= \"kind=measurement\" | logfmt | type=\"web-vitals\" | inp!=\"\" | unwrap inp | __error__=\"\" [$__range]) by ()",
+          "refId": "A",
+          "queryType": "instant"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 200
+              },
+              {
+                "color": "red",
+                "value": 500
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 16,
+      "type": "stat",
+      "title": "Slow page loads",
+      "description": "Page loads that took longer than 4 seconds.",
+      "datasource": {
+        "type": "loki",
+        "uid": "gaas-loki"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 14
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "gaas-loki"
+          },
+          "expr": "sum(count_over_time({source=\"faro\"} |= \"faro.performance.navigation\" | logfmt | event_name=\"faro.performance.navigation\" | event_data_pageLoadTime > 4000 | __error__=\"\" [$__range])) or vector(0)",
+          "refId": "A",
+          "queryType": "instant"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 17,
+      "type": "timeseries",
+      "title": "Page load time",
+      "description": "",
+      "datasource": {
+        "type": "loki",
+        "uid": "gaas-loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 18
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "gaas-loki"
+          },
+          "expr": "quantile_over_time(0.75, {source=\"faro\"} |= \"faro.performance.navigation\" | logfmt | event_name=\"faro.performance.navigation\" | unwrap event_data_pageLoadTime | __error__=\"\" [$__interval]) by ()",
+          "refId": "A",
+          "queryType": "range",
+          "legendFormat": "75th percentile"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 18,
+      "type": "table",
+      "title": "Slowest pages",
+      "description": "",
+      "datasource": {
+        "type": "loki",
+        "uid": "gaas-loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 18
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "gaas-loki"
+          },
+          "expr": "topk(20, quantile_over_time(0.75, {source=\"faro\"} |= \"faro.performance.navigation\" | logfmt | event_name=\"faro.performance.navigation\" | unwrap event_data_pageLoadTime | __error__=\"\" [$__range]) by (page_url))",
+          "refId": "A",
+          "queryType": "instant"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "Value #A": "Load time (p75)",
+              "Value": "Load time (p75)",
+              "page_url": "Page"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "Load time (p75)",
+                "desc": true
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "filterable": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Load time (p75)"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "ms"
+              },
+              {
+                "id": "custom.width",
+                "value": 130
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true
+      }
+    },
+    {
+      "id": 19,
+      "type": "row",
+      "title": "Pages and visitors",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 26
+      }
+    },
+    {
+      "id": 20,
+      "type": "table",
+      "title": "Most visited pages",
+      "description": "",
+      "datasource": {
+        "type": "loki",
+        "uid": "gaas-loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 27
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "gaas-loki"
+          },
+          "expr": "topk(20, sum by (page_url) (count_over_time({source=\"faro\"} |= \"faro.performance.navigation\" | logfmt | event_name=\"faro.performance.navigation\" [$__range])))",
+          "refId": "A",
+          "queryType": "instant"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "Value #A": "Page loads",
+              "Value": "Page loads",
+              "page_url": "Page"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "Page loads",
+                "desc": true
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "filterable": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Page loads"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "custom.width",
+                "value": 130
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true
+      }
+    },
+    {
+      "id": 21,
+      "type": "table",
+      "title": "Where visitors come from",
+      "description": "The site a visitor was on before this one. Visitors who typed the address, used a bookmark, or came from a site that hides it are not listed.",
+      "datasource": {
+        "type": "loki",
+        "uid": "gaas-loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 27
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "gaas-loki"
+          },
+          "expr": "topk(20, sum by (event_data_host) (count_over_time({source=\"faro\"} |= \"event_name=referrer\" | logfmt | event_name=\"referrer\" [$__range])))",
+          "refId": "A",
+          "queryType": "instant"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "Value #A": "Visits",
+              "Value": "Visits",
+              "event_data_host": "Referring site"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "Visits",
+                "desc": true
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "filterable": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Visits"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "custom.width",
+                "value": 130
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true
+      }
+    },
+    {
+      "id": 22,
+      "type": "piechart",
+      "title": "Browsers",
+      "datasource": {
+        "type": "loki",
+        "uid": "gaas-loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 35
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "gaas-loki"
+          },
+          "expr": "topk(10, sum by (browser_name) (count_over_time({source=\"faro\"} |= \"faro.performance.navigation\" | logfmt | event_name=\"faro.performance.navigation\" [$__range])))",
+          "refId": "A",
+          "queryType": "instant",
+          "legendFormat": "{{browser_name}}"
+        }
+      ],
+      "options": {
+        "pieType": "donut",
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 23,
+      "type": "piechart",
+      "title": "Operating systems",
+      "datasource": {
+        "type": "loki",
+        "uid": "gaas-loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 35
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "gaas-loki"
+          },
+          "expr": "topk(10, sum by (browser_os) (count_over_time({source=\"faro\"} |= \"faro.performance.navigation\" | logfmt | event_name=\"faro.performance.navigation\" [$__range])))",
+          "refId": "A",
+          "queryType": "instant",
+          "legendFormat": "{{browser_os}}"
+        }
+      ],
+      "options": {
+        "pieType": "donut",
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 24,
+      "type": "piechart",
+      "title": "Phone or computer",
+      "datasource": {
+        "type": "loki",
+        "uid": "gaas-loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 35
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "gaas-loki"
+          },
+          "expr": "sum by (browser_mobile) (count_over_time({source=\"faro\"} |= \"faro.performance.navigation\" | logfmt | event_name=\"faro.performance.navigation\" [$__range]))",
+          "refId": "A",
+          "queryType": "instant",
+          "legendFormat": "mobile: {{browser_mobile}}"
+        }
+      ],
+      "options": {
+        "pieType": "donut",
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 25,
+      "type": "row",
+      "title": "Errors",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 43
+      }
+    },
+    {
+      "id": 26,
+      "type": "table",
+      "title": "Errors by message",
+      "description": "",
+      "datasource": {
+        "type": "loki",
+        "uid": "gaas-loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 44
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "gaas-loki"
+          },
+          "expr": "topk(50, sum by (type, value, page_url) (count_over_time({source=\"faro\"} |= \"kind=exception\" | logfmt | kind=\"exception\" [$__range])))",
+          "refId": "A",
+          "queryType": "instant"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "Value #A": "Count",
+              "Value": "Count",
+              "type": "Type",
+              "value": "Message",
+              "page_url": "Page"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "Count",
+                "desc": true
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "filterable": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Count"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "custom.width",
+                "value": 130
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true
+      }
+    },
+    {
+      "id": 27,
+      "type": "logs",
+      "title": "Latest errors",
+      "datasource": {
+        "type": "loki",
+        "uid": "gaas-loki"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 52
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "gaas-loki"
+          },
+          "expr": "{source=\"faro\"} |= \"kind=exception\" | logfmt | kind=\"exception\" | line_format \"{{.type}}: {{.value}}  ({{.page_url}}, {{.browser_name}} on {{.browser_os}})\"",
+          "refId": "A",
+          "queryType": "range",
+          "maxLines": 100
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true,
+        "dedupStrategy": "none"
+      }
+    }
+  ]
+}
