@@ -1,0 +1,39 @@
+# Traces: a service whose requests fail, or are slow. Mimir evaluates them
+# every minute over the span metrics Tempo writes from each tenant's traces,
+# counting the spans that serve a request (server and consumer spans). A
+# service with fewer than 3 requests a minute is left out: a few failures
+# there are not a rate.
+thresholds:
+  error_percent:
+    default: 5
+    description: The share of a service's requests that fail, in percent, above which it alerts.
+  p95_seconds:
+    default: 2
+    description: The 95th percentile of a service's request duration, in seconds, above which it alerts.
+groups:
+  - name: traces
+    interval: 1m
+    rules:
+      - alert: ServiceErrorRate
+        expr: |
+          100 * sum by (service) (rate(traces_spanmetrics_calls_total{span_kind=~"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER", status_code="STATUS_CODE_ERROR"}[5m]))
+            / sum by (service) (rate(traces_spanmetrics_calls_total{span_kind=~"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER"}[5m]))
+            > ${error_percent}
+          and sum by (service) (rate(traces_spanmetrics_calls_total{span_kind=~"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER"}[5m])) > 0.05
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.service }} fails {{ $value | printf \"%.1f\" }}% of its requests"
+          description: "More than ${error_percent}% of the requests {{ $labels.service }} served in the last 5 minutes failed, for 10 minutes."
+      - alert: ServiceSlow
+        expr: |
+          histogram_quantile(0.95, sum by (service, le) (rate(traces_spanmetrics_latency_bucket{span_kind=~"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER"}[5m])))
+            > ${p95_seconds}
+          and sum by (service) (rate(traces_spanmetrics_calls_total{span_kind=~"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER"}[5m])) > 0.05
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.service }} is slow: 95% of its requests take up to {{ $value | humanizeDuration }}"
+          description: "The 95th percentile of {{ $labels.service }}'s request duration has been above ${p95_seconds} s for 10 minutes."

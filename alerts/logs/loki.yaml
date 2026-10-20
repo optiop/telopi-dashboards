@@ -1,0 +1,20 @@
+# Logs: a service that suddenly logs many errors. Loki evaluates it every
+# minute over the level Loki detects in each line (detected_level), per
+# service_name. The browser telemetry is the website set's, so it is left out.
+thresholds:
+  errors_per_5m:
+    default: 50
+    description: How many error lines one service may log in 5 minutes before it alerts.
+groups:
+  - name: logs
+    interval: 1m
+    rules:
+      - alert: ManyErrorLogs
+        expr: |
+          sum by (service_name) (count_over_time({service_name=~".+", source!="faro"} | detected_level=~"error|critical|fatal" [5m])) > ${errors_per_5m}
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.service_name }} logged {{ $value }} errors in 5 minutes"
+          description: "More than ${errors_per_5m} error lines from {{ $labels.service_name }} in the last 5 minutes, for 5 minutes."
