@@ -31,6 +31,7 @@ data-plane release. Until then, a change here must also be made there.
 | --- | --- | --- |
 | [`website/`](website) | Website: page loads, sessions, JavaScript errors, Core Web Vitals and where visitors come from, from the browser telemetry their sites send | their sites send browser telemetry |
 | [`uptime/`](uptime) | Uptime: which checked sites are up, their availability and response time | Telopi checks their sites |
+| [`nodes/`](nodes) | Machines: CPU, load, memory, disks and network of each machine, one row per machine and graphs over time | their machines run the Prometheus node exporter, or Alloy's unix exporter (Alloy's Kubernetes monitoring includes it) |
 
 A new set is a new folder. It reaches customers once the platform knows which
 customers have it, so add the folder and the platform's change together.
@@ -51,6 +52,11 @@ customers have it, so add the folder and the platform's change together.
   (Prometheus: metrics, the uptime probes and the span metrics from traces),
   `gaas-loki` (logs) and `gaas-tempo` (traces), or a dashboard variable such
   as `${datasource}`.
+- **Rates read at least four scrapes.** Alloy scrapes every minute, so every
+  query with `$__rate_interval` sets its *Min step* to `1m` (`"interval": "1m"`
+  on the target): Grafana then takes a minute as the scrape interval, and a
+  rate's window holds enough points. Without it Grafana assumes 15 seconds
+  and the graph is empty.
 - **It works for every customer.** One `main` serves them all: a panel that
   needs telemetry not every customer sends yet waits until they do.
 
