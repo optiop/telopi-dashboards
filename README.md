@@ -31,7 +31,7 @@ data-plane release. Until then, a change here must also be made there.
 | --- | --- | --- |
 | [`website/`](website) | Website: page loads, sessions, JavaScript errors, Core Web Vitals and where visitors come from, from the browser telemetry their sites send | their sites send browser telemetry |
 | [`uptime/`](uptime) | Uptime: which checked sites are up, their availability and response time | Telopi checks their sites |
-| [`nodes/`](nodes) | Machines: CPU, load, memory, disks and network of each machine, one row per machine and graphs over time | their machines run the Prometheus node exporter, or Alloy's unix exporter (Alloy's Kubernetes monitoring includes it) |
+| [`nodes/`](nodes) | Machines: CPU, load, memory, disks and network of each machine, one row per machine and graphs over time | always: every customer's Grafana has it, and it fills once their machines send the Prometheus node exporter's metrics or Alloy's unix exporter's (Alloy's Kubernetes monitoring includes it) |
 
 A new set is a new folder. It reaches customers once the platform knows which
 customers have it, so add the folder and the platform's change together.
