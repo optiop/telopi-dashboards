@@ -462,7 +462,7 @@
             "drawStyle": "line",
             "lineWidth": 1,
             "fillOpacity": 10,
-            "showPoints": "never",
+            "showPoints": "auto",
             "spanNulls": true
           },
           "min": 0,
@@ -516,7 +516,7 @@
             "drawStyle": "line",
             "lineWidth": 1,
             "fillOpacity": 10,
-            "showPoints": "never",
+            "showPoints": "auto",
             "spanNulls": true
           },
           "min": 0
@@ -569,7 +569,7 @@
             "drawStyle": "line",
             "lineWidth": 1,
             "fillOpacity": 60,
-            "showPoints": "never",
+            "showPoints": "auto",
             "spanNulls": true,
             "stacking": {
               "mode": "normal",
@@ -639,7 +639,7 @@
             "drawStyle": "line",
             "lineWidth": 1,
             "fillOpacity": 10,
-            "showPoints": "never",
+            "showPoints": "auto",
             "spanNulls": true
           },
           "min": 0,
@@ -703,7 +703,7 @@
             "drawStyle": "line",
             "lineWidth": 1,
             "fillOpacity": 10,
-            "showPoints": "never",
+            "showPoints": "auto",
             "spanNulls": true
           },
           "min": 0
@@ -769,7 +769,7 @@
             "drawStyle": "line",
             "lineWidth": 1,
             "fillOpacity": 10,
-            "showPoints": "never",
+            "showPoints": "auto",
             "spanNulls": true
           },
           "min": 0,
@@ -823,7 +823,7 @@
             "drawStyle": "line",
             "lineWidth": 1,
             "fillOpacity": 10,
-            "showPoints": "never",
+            "showPoints": "auto",
             "spanNulls": true
           },
           "min": 0,
@@ -887,7 +887,7 @@
             "drawStyle": "line",
             "lineWidth": 1,
             "fillOpacity": 10,
-            "showPoints": "never",
+            "showPoints": "auto",
             "spanNulls": true
           }
         },
@@ -975,7 +975,7 @@
             "drawStyle": "line",
             "lineWidth": 1,
             "fillOpacity": 10,
-            "showPoints": "never",
+            "showPoints": "auto",
             "spanNulls": true
           }
         },
@@ -1050,7 +1050,7 @@
             "drawStyle": "line",
             "lineWidth": 1,
             "fillOpacity": 10,
-            "showPoints": "never",
+            "showPoints": "auto",
             "spanNulls": true
           },
           "min": 0
