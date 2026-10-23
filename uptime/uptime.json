@@ -3,6 +3,7 @@
   "title": "Uptime",
   "description": "Checks of public websites from Telopi, every minute, with nothing installed on the sites.",
   "tags": [
+    "telopi",
     "gaas",
     "uptime"
   ],
@@ -85,10 +86,11 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "count(max by (company) (last_over_time(probe_success{company=~\"$company\"}[5m])) == 1) or vector(0)",
+          "expr": "count(max by (company) (probe_success{company=~\"$company\"}) == 1) or vector(0)",
           "refId": "A",
-          "instant": true,
-          "range": false
+          "instant": false,
+          "range": true,
+          "interval": "1m"
         }
       ],
       "fieldConfig": {
@@ -98,10 +100,13 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "text",
+                "color": "#4e80ee",
                 "value": null
               }
             ]
+          },
+          "color": {
+            "mode": "thresholds"
           }
         },
         "overrides": []
@@ -115,8 +120,12 @@
           "values": false
         },
         "colorMode": "value",
-        "graphMode": "none",
-        "textMode": "auto"
+        "graphMode": "area",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
       }
     },
     {
@@ -140,10 +149,11 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "count(max by (company) (last_over_time(probe_success{company=~\"$company\"}[5m])) == 0) or vector(0)",
+          "expr": "count(max by (company) (probe_success{company=~\"$company\"}) == 0) or vector(0)",
           "refId": "A",
-          "instant": true,
-          "range": false
+          "instant": false,
+          "range": true,
+          "interval": "1m"
         }
       ],
       "fieldConfig": {
@@ -153,14 +163,17 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#22c55e",
                 "value": null
               },
               {
-                "color": "red",
+                "color": "#f87171",
                 "value": 1
               }
             ]
+          },
+          "color": {
+            "mode": "thresholds"
           }
         },
         "overrides": []
@@ -174,8 +187,12 @@
           "values": false
         },
         "colorMode": "value",
-        "graphMode": "none",
-        "textMode": "auto"
+        "graphMode": "area",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
       }
     },
     {
@@ -199,10 +216,11 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "avg(avg_over_time(probe_success{company=~\"$company\"}[$__range]))",
+          "expr": "avg(probe_success{company=~\"$company\"})",
           "refId": "A",
-          "instant": true,
-          "range": false
+          "instant": false,
+          "range": true,
+          "interval": "1m"
         }
       ],
       "fieldConfig": {
@@ -212,41 +230,48 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "red",
+                "color": "#f87171",
                 "value": null
               },
               {
-                "color": "orange",
+                "color": "#fb923c",
                 "value": 0.99
               },
               {
-                "color": "green",
+                "color": "#22c55e",
                 "value": 0.999
               }
             ]
           },
-          "decimals": 2
+          "decimals": 2,
+          "color": {
+            "mode": "thresholds"
+          }
         },
         "overrides": []
       },
       "options": {
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "mean"
           ],
           "fields": "",
           "values": false
         },
         "colorMode": "value",
-        "graphMode": "none",
-        "textMode": "auto"
+        "graphMode": "area",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
       }
     },
     {
       "id": 5,
       "type": "stat",
       "title": "Average response time",
-      "description": "Mean time to a full answer in the selected time range, over all selected sites.",
+      "description": "Mean time to a full answer in the selected time range, over all selected sites. Over a second is slow; over three, visitors leave.",
       "datasource": {
         "type": "prometheus",
         "uid": "gaas-mimir"
@@ -263,10 +288,11 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "avg(avg_over_time(probe_duration_seconds{company=~\"$company\"}[$__range]))",
+          "expr": "avg(probe_duration_seconds{company=~\"$company\"})",
           "refId": "A",
-          "instant": true,
-          "range": false
+          "instant": false,
+          "range": true,
+          "interval": "1m"
         }
       ],
       "fieldConfig": {
@@ -276,25 +302,41 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "text",
+                "color": "#22c55e",
                 "value": null
+              },
+              {
+                "color": "#fb923c",
+                "value": 1
+              },
+              {
+                "color": "#f87171",
+                "value": 3
               }
             ]
-          }
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 2
         },
         "overrides": []
       },
       "options": {
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "mean"
           ],
           "fields": "",
           "values": false
         },
         "colorMode": "value",
-        "graphMode": "none",
-        "textMode": "auto"
+        "graphMode": "area",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
       }
     },
     {
@@ -463,12 +505,12 @@
                     "options": {
                       "0": {
                         "text": "Down",
-                        "color": "red",
+                        "color": "#f87171",
                         "index": 0
                       },
                       "1": {
                         "text": "Up",
-                        "color": "green",
+                        "color": "#22c55e",
                         "index": 1
                       }
                     }
@@ -507,15 +549,15 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "red",
+                      "color": "#f87171",
                       "value": null
                     },
                     {
-                      "color": "orange",
+                      "color": "#fb923c",
                       "value": 0.99
                     },
                     {
-                      "color": "green",
+                      "color": "#22c55e",
                       "value": 0.999
                     }
                   ]
@@ -573,15 +615,15 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "red",
+                      "color": "#f87171",
                       "value": null
                     },
                     {
-                      "color": "orange",
+                      "color": "#fb923c",
                       "value": 14
                     },
                     {
-                      "color": "green",
+                      "color": "#22c55e",
                       "value": 30
                     }
                   ]
@@ -636,12 +678,12 @@
               "options": {
                 "0": {
                   "text": "Down",
-                  "color": "red",
+                  "color": "#f87171",
                   "index": 0
                 },
                 "1": {
                   "text": "Up",
-                  "color": "green",
+                  "color": "#22c55e",
                   "index": 1
                 }
               }
@@ -658,11 +700,11 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "red",
+                "color": "#f87171",
                 "value": null
               },
               {
-                "color": "green",
+                "color": "#22c55e",
                 "value": 1
               }
             ]
@@ -714,10 +756,15 @@
           "unit": "s",
           "custom": {
             "drawStyle": "line",
-            "fillOpacity": 0,
-            "showPoints": "never",
-            "spanNulls": true
-          }
+            "fillOpacity": 12,
+            "showPoints": "auto",
+            "spanNulls": true,
+            "lineWidth": 2,
+            "gradientMode": "opacity",
+            "pointSize": 4,
+            "lineInterpolation": "smooth"
+          },
+          "decimals": 2
         },
         "overrides": []
       },
@@ -735,6 +782,22 @@
           "sort": "desc"
         }
       }
+    }
+  ],
+  "links": [
+    {
+      "type": "dashboards",
+      "tags": [
+        "telopi"
+      ],
+      "asDropdown": true,
+      "title": "Telopi dashboards",
+      "includeVars": false,
+      "keepTime": true,
+      "targetBlank": false,
+      "icon": "external link",
+      "tooltip": "",
+      "url": ""
     }
   ]
 }
