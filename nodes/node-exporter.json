@@ -1,7 +1,7 @@
 {
   "uid": "telopi-node-exporter",
   "title": "Machines",
-  "description": "CPU, memory, disks and network of each machine that runs the Prometheus node exporter, or Alloy's unix exporter.",
+  "description": "CPU, memory, disks and network of each machine that runs the Prometheus node exporter, or Alloy's unix exporter, in each environment: a Kubernetes cluster's nodes, or any machines that send to this Grafana.",
   "tags": [
     "telopi",
     "node-exporter"
@@ -16,29 +16,45 @@
     "from": "now-6h",
     "to": "now"
   },
-  "annotations": {
-    "list": []
-  },
+  "links": [
+    {
+      "type": "dashboards",
+      "tags": [
+        "telopi"
+      ],
+      "asDropdown": true,
+      "title": "Telopi dashboards",
+      "includeVars": false,
+      "keepTime": true,
+      "targetBlank": false,
+      "icon": "external link",
+      "tooltip": "",
+      "url": ""
+    }
+  ],
   "templating": {
     "list": [
       {
-        "name": "job",
-        "label": "Job",
+        "name": "environment",
+        "label": "Environment",
+        "description": "An environment is a Kubernetes cluster, or any machines, that send to this Grafana under one name: the cluster label Alloy sets. Machines without one show under All, and under an environment once Alloy sets cluster.",
         "type": "query",
         "datasource": {
           "type": "prometheus",
           "uid": "gaas-mimir"
         },
         "query": {
-          "query": "label_values(node_uname_info, job)",
-          "refId": "job"
+          "query": "label_values(node_uname_info, cluster)",
+          "refId": "environment",
+          "qryType": 1
         },
-        "definition": "label_values(node_uname_info, job)",
+        "definition": "label_values(node_uname_info, cluster)",
         "refresh": 2,
         "sort": 1,
+        "regex": "",
         "multi": true,
         "includeAll": true,
-        "allValue": ".+",
+        "hide": 0,
         "current": {
           "selected": true,
           "text": [
@@ -47,26 +63,62 @@
           "value": [
             "$__all"
           ]
-        }
+        },
+        "allValue": ".*"
+      },
+      {
+        "name": "job",
+        "label": "Job",
+        "description": "",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "gaas-mimir"
+        },
+        "query": {
+          "query": "label_values(node_uname_info{cluster=~\"$environment\"}, job)",
+          "refId": "job",
+          "qryType": 1
+        },
+        "definition": "label_values(node_uname_info{cluster=~\"$environment\"}, job)",
+        "refresh": 2,
+        "sort": 1,
+        "regex": "",
+        "multi": true,
+        "includeAll": true,
+        "hide": 0,
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "allValue": ".+"
       },
       {
         "name": "instance",
         "label": "Machine",
+        "description": "",
         "type": "query",
         "datasource": {
           "type": "prometheus",
           "uid": "gaas-mimir"
         },
         "query": {
-          "query": "label_values(node_uname_info{job=~\"$job\"}, instance)",
-          "refId": "instance"
+          "query": "label_values(node_uname_info{cluster=~\"$environment\", job=~\"$job\"}, instance)",
+          "refId": "instance",
+          "qryType": 1
         },
-        "definition": "label_values(node_uname_info{job=~\"$job\"}, instance)",
+        "definition": "label_values(node_uname_info{cluster=~\"$environment\", job=~\"$job\"}, instance)",
         "refresh": 2,
         "sort": 1,
+        "regex": "",
         "multi": true,
         "includeAll": true,
-        "allValue": ".+",
+        "hide": 0,
         "current": {
           "selected": true,
           "text": [
@@ -75,9 +127,13 @@
           "value": [
             "$__all"
           ]
-        }
+        },
+        "allValue": ".+"
       }
     ]
+  },
+  "annotations": {
+    "list": []
   },
   "panels": [
     {
@@ -95,18 +151,18 @@
     },
     {
       "id": 2,
-      "type": "table",
-      "title": "Machines",
-      "description": "Each machine now. CPU busy is over the last five minutes; memory used is total minus what the kernel says is available.",
+      "type": "stat",
+      "title": "Machines sending",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 1
+      },
+      "description": "Machines that sent in the last five minutes.",
       "datasource": {
         "type": "prometheus",
         "uid": "gaas-mimir"
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 24,
-        "x": 0,
-        "y": 1
       },
       "targets": [
         {
@@ -114,9 +170,423 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "time() - max by (instance) (node_boot_time_seconds{job=~\"$job\", instance=~\"$instance\"})",
+          "expr": "count(max by (cluster, instance) (node_uname_info{cluster=~\"$environment\", job=~\"$job\", instance=~\"$instance\"}))",
           "refId": "A",
-          "legendFormat": "{{instance}}",
+          "instant": false,
+          "range": true,
+          "interval": "1m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#4e80ee",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Busiest CPU",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 1
+      },
+      "description": "The highest share of CPU time not idle, of any selected machine.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "max(100 * (1 - avg by (cluster, instance) (rate(node_cpu_seconds_total{mode=\"idle\", cluster=~\"$environment\", job=~\"$job\", instance=~\"$instance\"}[$__rate_interval]))))",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "interval": "1m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#22c55e",
+                "value": null
+              },
+              {
+                "color": "#fb923c",
+                "value": 70
+              },
+              {
+                "color": "#f87171",
+                "value": 90
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Highest load per core",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 1
+      },
+      "description": "The highest 1-minute load average per core. Above 1, work waits for a CPU.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "max(max by (cluster, instance) (node_load1{cluster=~\"$environment\", job=~\"$job\", instance=~\"$instance\"}) / count by (cluster, instance) (node_cpu_seconds_total{mode=\"idle\", cluster=~\"$environment\", job=~\"$job\", instance=~\"$instance\"}))",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "interval": "1m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#22c55e",
+                "value": null
+              },
+              {
+                "color": "#fb923c",
+                "value": 1
+              },
+              {
+                "color": "#f87171",
+                "value": 2
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Fullest memory",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 1
+      },
+      "description": "The highest share of memory in use, of any selected machine.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "max(100 * (1 - max by (cluster, instance) (node_memory_MemAvailable_bytes{cluster=~\"$environment\", job=~\"$job\", instance=~\"$instance\"}) / max by (cluster, instance) (node_memory_MemTotal_bytes{cluster=~\"$environment\", job=~\"$job\", instance=~\"$instance\"})))",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "interval": "1m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#22c55e",
+                "value": null
+              },
+              {
+                "color": "#fb923c",
+                "value": 70
+              },
+              {
+                "color": "#f87171",
+                "value": 90
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Fullest disk",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 1
+      },
+      "description": "The fullest real filesystem of any selected machine.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "max(100 * (1 - max by (cluster, instance, mountpoint) (node_filesystem_avail_bytes{fstype!~\"tmpfs|ramfs|overlay|squashfs|nsfs|autofs|fuse.*|devtmpfs\", cluster=~\"$environment\", job=~\"$job\", instance=~\"$instance\"}) / max by (cluster, instance, mountpoint) (node_filesystem_size_bytes{fstype!~\"tmpfs|ramfs|overlay|squashfs|nsfs|autofs|fuse.*|devtmpfs\", cluster=~\"$environment\", job=~\"$job\", instance=~\"$instance\"})))",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "interval": "1m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#22c55e",
+                "value": null
+              },
+              {
+                "color": "#fb923c",
+                "value": 80
+              },
+              {
+                "color": "#f87171",
+                "value": 90
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Network in and out",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 1
+      },
+      "description": "Bits a second through physical interfaces, all selected machines.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "sum(rate(node_network_receive_bytes_total{device!~\"lo|veth.*|cali.*|flannel.*|cni.*|docker.*|br-.*|virbr.*|tunl.*|vxlan.*|kube-ipvs.*|lxc.*|gke.*|eni.*|azv.*\", cluster=~\"$environment\", job=~\"$job\", instance=~\"$instance\"}[$__rate_interval]) + rate(node_network_transmit_bytes_total{device!~\"lo|veth.*|cali.*|flannel.*|cni.*|docker.*|br-.*|virbr.*|tunl.*|vxlan.*|kube-ipvs.*|lxc.*|gke.*|eni.*|azv.*\", cluster=~\"$environment\", job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) * 8",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "interval": "1m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bps",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#4e80ee",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 8,
+      "type": "table",
+      "title": "Machines",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "description": "Each machine now. CPU busy is over the last five minutes; memory used is total minus what the kernel says is available. Environment is empty for a machine whose Alloy sets no cluster label.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "time() - max by (cluster, instance) (node_boot_time_seconds{cluster=~\"$environment\", job=~\"$job\", instance=~\"$instance\"})",
+          "refId": "A",
           "instant": true,
           "range": false,
           "format": "table"
@@ -126,9 +596,8 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "count by (instance) (node_cpu_seconds_total{mode=\"idle\", job=~\"$job\", instance=~\"$instance\"})",
+          "expr": "count by (cluster, instance) (node_cpu_seconds_total{mode=\"idle\", cluster=~\"$environment\", job=~\"$job\", instance=~\"$instance\"})",
           "refId": "B",
-          "legendFormat": "{{instance}}",
           "instant": true,
           "range": false,
           "format": "table"
@@ -138,9 +607,8 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "max by (instance) (node_memory_MemTotal_bytes{job=~\"$job\", instance=~\"$instance\"})",
+          "expr": "max by (cluster, instance) (node_memory_MemTotal_bytes{cluster=~\"$environment\", job=~\"$job\", instance=~\"$instance\"})",
           "refId": "C",
-          "legendFormat": "{{instance}}",
           "instant": true,
           "range": false,
           "format": "table"
@@ -150,9 +618,8 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "100 * (1 - avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\", job=~\"$job\", instance=~\"$instance\"}[5m])))",
+          "expr": "100 * (1 - avg by (cluster, instance) (rate(node_cpu_seconds_total{mode=\"idle\", cluster=~\"$environment\", job=~\"$job\", instance=~\"$instance\"}[5m])))",
           "refId": "D",
-          "legendFormat": "{{instance}}",
           "instant": true,
           "range": false,
           "format": "table"
@@ -162,9 +629,8 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "100 * (1 - max by (instance) (node_memory_MemAvailable_bytes{job=~\"$job\", instance=~\"$instance\"}) / max by (instance) (node_memory_MemTotal_bytes{job=~\"$job\", instance=~\"$instance\"}))",
+          "expr": "100 * (1 - max by (cluster, instance) (node_memory_MemAvailable_bytes{cluster=~\"$environment\", job=~\"$job\", instance=~\"$instance\"}) / max by (cluster, instance) (node_memory_MemTotal_bytes{cluster=~\"$environment\", job=~\"$job\", instance=~\"$instance\"}))",
           "refId": "E",
-          "legendFormat": "{{instance}}",
           "instant": true,
           "range": false,
           "format": "table"
@@ -174,9 +640,8 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "100 * (1 - max by (instance) (node_filesystem_avail_bytes{mountpoint=\"/\", fstype!~\"tmpfs|ramfs|overlay|squashfs|nsfs|autofs|fuse.*|devtmpfs\", job=~\"$job\", instance=~\"$instance\"}) / max by (instance) (node_filesystem_size_bytes{mountpoint=\"/\", fstype!~\"tmpfs|ramfs|overlay|squashfs|nsfs|autofs|fuse.*|devtmpfs\", job=~\"$job\", instance=~\"$instance\"}))",
+          "expr": "100 * (1 - max by (cluster, instance) (node_filesystem_avail_bytes{mountpoint=\"/\", fstype!~\"tmpfs|ramfs|overlay|squashfs|nsfs|autofs|fuse.*|devtmpfs\", cluster=~\"$environment\", job=~\"$job\", instance=~\"$instance\"}) / max by (cluster, instance) (node_filesystem_size_bytes{mountpoint=\"/\", fstype!~\"tmpfs|ramfs|overlay|squashfs|nsfs|autofs|fuse.*|devtmpfs\", cluster=~\"$environment\", job=~\"$job\", instance=~\"$instance\"}))",
           "refId": "F",
-          "legendFormat": "{{instance}}",
           "instant": true,
           "range": false,
           "format": "table"
@@ -194,15 +659,17 @@
               "Time": true
             },
             "indexByName": {
-              "instance": 0,
-              "Value #A": 1,
-              "Value #B": 2,
-              "Value #C": 3,
-              "Value #D": 4,
-              "Value #E": 5,
-              "Value #F": 6
+              "cluster": 0,
+              "instance": 1,
+              "Value #A": 2,
+              "Value #B": 3,
+              "Value #C": 4,
+              "Value #D": 5,
+              "Value #E": 6,
+              "Value #F": 7
             },
             "renameByName": {
+              "cluster": "Environment",
               "instance": "Machine",
               "Value #A": "Up for",
               "Value #B": "CPU cores",
@@ -217,7 +684,11 @@
       "fieldConfig": {
         "defaults": {
           "custom": {
-            "align": "auto"
+            "align": "auto",
+            "filterable": true,
+            "cellOptions": {
+              "type": "auto"
+            }
           }
         },
         "overrides": [
@@ -244,8 +715,8 @@
             },
             "properties": [
               {
-                "id": "unit",
-                "value": "short"
+                "id": "decimals",
+                "value": 0
               }
             ]
           },
@@ -272,6 +743,26 @@
                 "value": "percent"
               },
               {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "#22c55e",
+                      "value": null
+                    },
+                    {
+                      "color": "#fb923c",
+                      "value": 70
+                    },
+                    {
+                      "color": "#f87171",
+                      "value": 90
+                    }
+                  ]
+                }
+              },
+              {
                 "id": "min",
                 "value": 0
               },
@@ -280,23 +771,9 @@
                 "value": 100
               },
               {
-                "id": "thresholds",
+                "id": "color",
                 "value": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "green",
-                      "value": null
-                    },
-                    {
-                      "color": "orange",
-                      "value": 70
-                    },
-                    {
-                      "color": "red",
-                      "value": 90
-                    }
-                  ]
+                  "mode": "thresholds"
                 }
               },
               {
@@ -319,6 +796,26 @@
                 "value": "percent"
               },
               {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "#22c55e",
+                      "value": null
+                    },
+                    {
+                      "color": "#fb923c",
+                      "value": 70
+                    },
+                    {
+                      "color": "#f87171",
+                      "value": 90
+                    }
+                  ]
+                }
+              },
+              {
                 "id": "min",
                 "value": 0
               },
@@ -327,23 +824,9 @@
                 "value": 100
               },
               {
-                "id": "thresholds",
+                "id": "color",
                 "value": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "green",
-                      "value": null
-                    },
-                    {
-                      "color": "orange",
-                      "value": 70
-                    },
-                    {
-                      "color": "red",
-                      "value": 90
-                    }
-                  ]
+                  "mode": "thresholds"
                 }
               },
               {
@@ -366,6 +849,26 @@
                 "value": "percent"
               },
               {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "#22c55e",
+                      "value": null
+                    },
+                    {
+                      "color": "#fb923c",
+                      "value": 80
+                    },
+                    {
+                      "color": "#f87171",
+                      "value": 90
+                    }
+                  ]
+                }
+              },
+              {
                 "id": "min",
                 "value": 0
               },
@@ -374,23 +877,9 @@
                 "value": 100
               },
               {
-                "id": "thresholds",
+                "id": "color",
                 "value": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "green",
-                      "value": null
-                    },
-                    {
-                      "color": "orange",
-                      "value": 70
-                    },
-                    {
-                      "color": "red",
-                      "value": 90
-                    }
-                  ]
+                  "mode": "thresholds"
                 }
               },
               {
@@ -407,6 +896,9 @@
       "options": {
         "showHeader": true,
         "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
         "sortBy": [
           {
             "displayName": "Machine",
@@ -416,7 +908,7 @@
       }
     },
     {
-      "id": 3,
+      "id": 9,
       "type": "row",
       "title": "CPU",
       "collapsed": false,
@@ -424,24 +916,24 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 8
+        "y": 13
       },
       "panels": []
     },
     {
-      "id": 4,
+      "id": 10,
       "type": "timeseries",
       "title": "CPU busy",
-      "description": "Share of CPU time not idle, per machine.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "gaas-mimir"
-      },
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 9
+        "y": 14
+      },
+      "description": "Share of CPU time not idle, per machine.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
       },
       "targets": [
         {
@@ -449,9 +941,11 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "100 * (1 - avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\", job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])))",
+          "expr": "100 * (1 - avg by (cluster, instance) (rate(node_cpu_seconds_total{mode=\"idle\", cluster=~\"$environment\", job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])))",
           "refId": "A",
           "legendFormat": "{{instance}}",
+          "instant": false,
+          "range": true,
           "interval": "1m"
         }
       ],
@@ -460,20 +954,32 @@
           "unit": "percent",
           "custom": {
             "drawStyle": "line",
-            "lineWidth": 1,
-            "fillOpacity": 10,
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
             "showPoints": "auto",
-            "spanNulls": true
+            "pointSize": 4,
+            "spanNulls": true,
+            "axisSoftMin": 0,
+            "lineInterpolation": "smooth"
+          },
+          "color": {
+            "mode": "palette-classic"
           },
           "min": 0,
-          "max": 100
+          "max": 100,
+          "decimals": 0
         },
         "overrides": []
       },
       "options": {
         "legend": {
-          "displayMode": "list",
+          "displayMode": "table",
           "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ],
           "showLegend": true
         },
         "tooltip": {
@@ -483,19 +989,19 @@
       }
     },
     {
-      "id": 5,
+      "id": 11,
       "type": "timeseries",
       "title": "Load per core",
-      "description": "The 1-minute load average divided by the number of cores. Above 1, work is waiting for a CPU.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "gaas-mimir"
-      },
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 9
+        "y": 14
+      },
+      "description": "The 1-minute load average divided by the number of cores. Above 1, work is waiting for a CPU.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
       },
       "targets": [
         {
@@ -503,9 +1009,11 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "max by (instance) (node_load1{job=~\"$job\", instance=~\"$instance\"}) / count by (instance) (node_cpu_seconds_total{mode=\"idle\", job=~\"$job\", instance=~\"$instance\"})",
+          "expr": "max by (cluster, instance) (node_load1{cluster=~\"$environment\", job=~\"$job\", instance=~\"$instance\"}) / count by (cluster, instance) (node_cpu_seconds_total{mode=\"idle\", cluster=~\"$environment\", job=~\"$job\", instance=~\"$instance\"})",
           "refId": "A",
           "legendFormat": "{{instance}}",
+          "instant": false,
+          "range": true,
           "interval": "1m"
         }
       ],
@@ -514,273 +1022,31 @@
           "unit": "short",
           "custom": {
             "drawStyle": "line",
-            "lineWidth": 1,
-            "fillOpacity": 10,
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
             "showPoints": "auto",
-            "spanNulls": true
-          },
-          "min": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      }
-    },
-    {
-      "id": 6,
-      "type": "timeseries",
-      "title": "CPU time by mode",
-      "description": "Where the selected machines' CPU time goes, idle left out, as a share of all their cores. High iowait means waiting on disks; steal means the hypervisor gave the time to another machine.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "gaas-mimir"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 17
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "gaas-mimir"
-          },
-          "expr": "100 * sum by (mode) (rate(node_cpu_seconds_total{mode!=\"idle\", job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) / scalar(count(node_cpu_seconds_total{mode=\"idle\", job=~\"$job\", instance=~\"$instance\"}))",
-          "refId": "A",
-          "legendFormat": "{{mode}}",
-          "interval": "1m"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percent",
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 1,
-            "fillOpacity": 60,
-            "showPoints": "auto",
+            "pointSize": 4,
             "spanNulls": true,
-            "stacking": {
-              "mode": "normal",
-              "group": "A"
-            }
+            "axisSoftMin": 0,
+            "lineInterpolation": "smooth"
           },
-          "min": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      }
-    },
-    {
-      "id": 7,
-      "type": "row",
-      "title": "Memory",
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 25
-      },
-      "panels": []
-    },
-    {
-      "id": 8,
-      "type": "timeseries",
-      "title": "Memory used",
-      "description": "Memory in use, per machine.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "gaas-mimir"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 26
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "gaas-mimir"
-          },
-          "expr": "100 * (1 - max by (instance) (node_memory_MemAvailable_bytes{job=~\"$job\", instance=~\"$instance\"}) / max by (instance) (node_memory_MemTotal_bytes{job=~\"$job\", instance=~\"$instance\"}))",
-          "refId": "A",
-          "legendFormat": "{{instance}}",
-          "interval": "1m"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percent",
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "showPoints": "auto",
-            "spanNulls": true
+          "color": {
+            "mode": "palette-classic"
           },
           "min": 0,
-          "max": 100
+          "decimals": 2
         },
         "overrides": []
       },
       "options": {
         "legend": {
-          "displayMode": "list",
+          "displayMode": "table",
           "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      }
-    },
-    {
-      "id": 9,
-      "type": "timeseries",
-      "title": "Memory available and swap used",
-      "description": "Memory the kernel can hand out without swapping, and swap in use.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "gaas-mimir"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 26
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "gaas-mimir"
-          },
-          "expr": "max by (instance) (node_memory_MemAvailable_bytes{job=~\"$job\", instance=~\"$instance\"})",
-          "refId": "A",
-          "legendFormat": "{{instance}} available",
-          "interval": "1m"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "gaas-mimir"
-          },
-          "expr": "max by (instance) (node_memory_SwapTotal_bytes{job=~\"$job\", instance=~\"$instance\"} - node_memory_SwapFree_bytes{job=~\"$job\", instance=~\"$instance\"})",
-          "refId": "B",
-          "legendFormat": "{{instance}} swap used",
-          "interval": "1m"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes",
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "showPoints": "auto",
-            "spanNulls": true
-          },
-          "min": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      }
-    },
-    {
-      "id": 10,
-      "type": "row",
-      "title": "Disk",
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 34
-      },
-      "panels": []
-    },
-    {
-      "id": 11,
-      "type": "timeseries",
-      "title": "Filesystem used",
-      "description": "Space used on each real filesystem.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "gaas-mimir"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 35
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "gaas-mimir"
-          },
-          "expr": "100 * (1 - max by (instance, mountpoint) (node_filesystem_avail_bytes{fstype!~\"tmpfs|ramfs|overlay|squashfs|nsfs|autofs|fuse.*|devtmpfs\", job=~\"$job\", instance=~\"$instance\"}) / max by (instance, mountpoint) (node_filesystem_size_bytes{fstype!~\"tmpfs|ramfs|overlay|squashfs|nsfs|autofs|fuse.*|devtmpfs\", job=~\"$job\", instance=~\"$instance\"}))",
-          "refId": "A",
-          "legendFormat": "{{instance}} {{mountpoint}}",
-          "interval": "1m"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percent",
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "showPoints": "auto",
-            "spanNulls": true
-          },
-          "min": 0,
-          "max": 100
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ],
           "showLegend": true
         },
         "tooltip": {
@@ -792,17 +1058,17 @@
     {
       "id": 12,
       "type": "timeseries",
-      "title": "Disk busy",
-      "description": "Share of time each disk was serving requests. Near 100%, the disk is the bottleneck.",
+      "title": "CPU time by mode",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 22
+      },
+      "description": "Where the selected machines' CPU time goes, idle left out, as a share of all their cores. High iowait means waiting on disks; steal means the hypervisor gave the time to another machine.",
       "datasource": {
         "type": "prometheus",
         "uid": "gaas-mimir"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 35
       },
       "targets": [
         {
@@ -810,9 +1076,11 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "100 * max by (instance, device) (rate(node_disk_io_time_seconds_total{device!~\"sr.*|loop.*|ram.*|fd.*\", job=~\"$job\", instance=~\"$instance\"}[$__rate_interval]))",
+          "expr": "100 * sum by (mode) (rate(node_cpu_seconds_total{mode!=\"idle\", cluster=~\"$environment\", job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) / scalar(count(node_cpu_seconds_total{mode=\"idle\", cluster=~\"$environment\", job=~\"$job\", instance=~\"$instance\"}))",
           "refId": "A",
-          "legendFormat": "{{instance}} {{device}}",
+          "legendFormat": "{{mode}}",
+          "instant": false,
+          "range": true,
           "interval": "1m"
         }
       ],
@@ -821,20 +1089,35 @@
           "unit": "percent",
           "custom": {
             "drawStyle": "line",
-            "lineWidth": 1,
-            "fillOpacity": 10,
+            "lineWidth": 2,
+            "fillOpacity": 60,
+            "gradientMode": "opacity",
             "showPoints": "auto",
-            "spanNulls": true
+            "pointSize": 4,
+            "spanNulls": true,
+            "axisSoftMin": 0,
+            "lineInterpolation": "smooth",
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
           },
           "min": 0,
-          "max": 100
+          "decimals": 1
         },
         "overrides": []
       },
       "options": {
         "legend": {
-          "displayMode": "list",
+          "displayMode": "table",
           "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ],
           "showLegend": true
         },
         "tooltip": {
@@ -845,18 +1128,31 @@
     },
     {
       "id": 13,
+      "type": "row",
+      "title": "Memory",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 30
+      },
+      "panels": []
+    },
+    {
+      "id": 14,
       "type": "timeseries",
-      "title": "Disk throughput",
-      "description": "Bytes read (up) and written (down) per second, all disks of a machine.",
+      "title": "Memory used",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 31
+      },
+      "description": "Memory in use, per machine.",
       "datasource": {
         "type": "prometheus",
         "uid": "gaas-mimir"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 43
       },
       "targets": [
         {
@@ -864,52 +1160,45 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "sum by (instance) (rate(node_disk_read_bytes_total{device!~\"sr.*|loop.*|ram.*|fd.*\", job=~\"$job\", instance=~\"$instance\"}[$__rate_interval]))",
+          "expr": "100 * (1 - max by (cluster, instance) (node_memory_MemAvailable_bytes{cluster=~\"$environment\", job=~\"$job\", instance=~\"$instance\"}) / max by (cluster, instance) (node_memory_MemTotal_bytes{cluster=~\"$environment\", job=~\"$job\", instance=~\"$instance\"}))",
           "refId": "A",
-          "legendFormat": "{{instance}} read",
-          "interval": "1m"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "gaas-mimir"
-          },
-          "expr": "sum by (instance) (rate(node_disk_written_bytes_total{device!~\"sr.*|loop.*|ram.*|fd.*\", job=~\"$job\", instance=~\"$instance\"}[$__rate_interval]))",
-          "refId": "B",
-          "legendFormat": "{{instance}} write",
+          "legendFormat": "{{instance}}",
+          "instant": false,
+          "range": true,
           "interval": "1m"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "Bps",
+          "unit": "percent",
           "custom": {
             "drawStyle": "line",
-            "lineWidth": 1,
-            "fillOpacity": 10,
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
             "showPoints": "auto",
-            "spanNulls": true
-          }
+            "pointSize": 4,
+            "spanNulls": true,
+            "axisSoftMin": 0,
+            "lineInterpolation": "smooth"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0,
+          "max": 100,
+          "decimals": 0
         },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": ".* write$"
-            },
-            "properties": [
-              {
-                "id": "custom.transform",
-                "value": "negative-Y"
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "options": {
         "legend": {
-          "displayMode": "list",
+          "displayMode": "table",
           "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ],
           "showLegend": true
         },
         "tooltip": {
@@ -919,32 +1208,19 @@
       }
     },
     {
-      "id": 14,
-      "type": "row",
-      "title": "Network",
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 51
-      },
-      "panels": []
-    },
-    {
       "id": 15,
       "type": "timeseries",
-      "title": "Network traffic",
-      "description": "Bits received (up) and sent (down) per second, physical interfaces only.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "gaas-mimir"
-      },
+      "title": "Memory available and swap used",
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 0,
-        "y": 52
+        "x": 12,
+        "y": 31
+      },
+      "description": "Memory the kernel can hand out without swapping, and swap in use.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
       },
       "targets": [
         {
@@ -952,9 +1228,11 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "sum by (instance) (rate(node_network_receive_bytes_total{device!~\"lo|veth.*|cali.*|flannel.*|cni.*|docker.*|br-.*|virbr.*|tunl.*|vxlan.*|kube-ipvs.*|lxc.*|gke.*|eni.*|azv.*\", job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) * 8",
+          "expr": "max by (cluster, instance) (node_memory_MemAvailable_bytes{cluster=~\"$environment\", job=~\"$job\", instance=~\"$instance\"})",
           "refId": "A",
-          "legendFormat": "{{instance}} in",
+          "legendFormat": "{{instance}} available",
+          "instant": false,
+          "range": true,
           "interval": "1m"
         },
         {
@@ -962,33 +1240,49 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "sum by (instance) (rate(node_network_transmit_bytes_total{device!~\"lo|veth.*|cali.*|flannel.*|cni.*|docker.*|br-.*|virbr.*|tunl.*|vxlan.*|kube-ipvs.*|lxc.*|gke.*|eni.*|azv.*\", job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) * 8",
+          "expr": "max by (cluster, instance) (node_memory_SwapTotal_bytes{cluster=~\"$environment\", job=~\"$job\", instance=~\"$instance\"} - node_memory_SwapFree_bytes{cluster=~\"$environment\", job=~\"$job\", instance=~\"$instance\"})",
           "refId": "B",
-          "legendFormat": "{{instance}} out",
+          "legendFormat": "{{instance}} swap used",
+          "instant": false,
+          "range": true,
           "interval": "1m"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "bps",
+          "unit": "bytes",
           "custom": {
             "drawStyle": "line",
-            "lineWidth": 1,
-            "fillOpacity": 10,
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
             "showPoints": "auto",
-            "spanNulls": true
-          }
+            "pointSize": 4,
+            "spanNulls": true,
+            "axisSoftMin": 0,
+            "lineInterpolation": "smooth"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
         },
         "overrides": [
           {
             "matcher": {
               "id": "byRegexp",
-              "options": ".* out$"
+              "options": ".* swap used"
             },
             "properties": [
               {
-                "id": "custom.transform",
-                "value": "negative-Y"
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    8,
+                    6
+                  ]
+                }
               }
             ]
           }
@@ -996,8 +1290,12 @@
       },
       "options": {
         "legend": {
-          "displayMode": "list",
+          "displayMode": "table",
           "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ],
           "showLegend": true
         },
         "tooltip": {
@@ -1008,66 +1306,426 @@
     },
     {
       "id": 16,
-      "type": "timeseries",
-      "title": "Network errors and drops",
-      "description": "Packets per second that failed or were dropped, in and out.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "gaas-mimir"
-      },
+      "type": "row",
+      "title": "Disk",
+      "collapsed": true,
       "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 52
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 39
       },
-      "targets": [
+      "panels": [
         {
+          "id": 17,
+          "type": "timeseries",
+          "title": "Filesystem used",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 40
+          },
+          "description": "Space used on each real filesystem.",
           "datasource": {
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "sum by (instance) (rate(node_network_receive_errs_total{device!~\"lo|veth.*|cali.*|flannel.*|cni.*|docker.*|br-.*|virbr.*|tunl.*|vxlan.*|kube-ipvs.*|lxc.*|gke.*|eni.*|azv.*\", job=~\"$job\", instance=~\"$instance\"}[$__rate_interval]) + rate(node_network_transmit_errs_total{device!~\"lo|veth.*|cali.*|flannel.*|cni.*|docker.*|br-.*|virbr.*|tunl.*|vxlan.*|kube-ipvs.*|lxc.*|gke.*|eni.*|azv.*\", job=~\"$job\", instance=~\"$instance\"}[$__rate_interval]))",
-          "refId": "A",
-          "legendFormat": "{{instance}} errors",
-          "interval": "1m"
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "gaas-mimir"
+              },
+              "expr": "100 * (1 - max by (cluster, instance, mountpoint) (node_filesystem_avail_bytes{fstype!~\"tmpfs|ramfs|overlay|squashfs|nsfs|autofs|fuse.*|devtmpfs\", cluster=~\"$environment\", job=~\"$job\", instance=~\"$instance\"}) / max by (cluster, instance, mountpoint) (node_filesystem_size_bytes{fstype!~\"tmpfs|ramfs|overlay|squashfs|nsfs|autofs|fuse.*|devtmpfs\", cluster=~\"$environment\", job=~\"$job\", instance=~\"$instance\"}))",
+              "refId": "A",
+              "legendFormat": "{{instance}} {{mountpoint}}",
+              "instant": false,
+              "range": true,
+              "interval": "1m"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 12,
+                "gradientMode": "opacity",
+                "showPoints": "auto",
+                "pointSize": 4,
+                "spanNulls": true,
+                "axisSoftMin": 0,
+                "lineInterpolation": "smooth"
+              },
+              "color": {
+                "mode": "palette-classic"
+              },
+              "min": 0,
+              "max": 100,
+              "decimals": 0
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "calcs": [
+                "mean",
+                "max"
+              ],
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
         },
         {
+          "id": 18,
+          "type": "timeseries",
+          "title": "Disk busy",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 40
+          },
+          "description": "Share of time each disk was serving requests. Near 100%, the disk is the bottleneck.",
           "datasource": {
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "sum by (instance) (rate(node_network_receive_drop_total{device!~\"lo|veth.*|cali.*|flannel.*|cni.*|docker.*|br-.*|virbr.*|tunl.*|vxlan.*|kube-ipvs.*|lxc.*|gke.*|eni.*|azv.*\", job=~\"$job\", instance=~\"$instance\"}[$__rate_interval]) + rate(node_network_transmit_drop_total{device!~\"lo|veth.*|cali.*|flannel.*|cni.*|docker.*|br-.*|virbr.*|tunl.*|vxlan.*|kube-ipvs.*|lxc.*|gke.*|eni.*|azv.*\", job=~\"$job\", instance=~\"$instance\"}[$__rate_interval]))",
-          "refId": "B",
-          "legendFormat": "{{instance}} drops",
-          "interval": "1m"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "pps",
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "showPoints": "auto",
-            "spanNulls": true
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "gaas-mimir"
+              },
+              "expr": "100 * max by (cluster, instance, device) (rate(node_disk_io_time_seconds_total{device!~\"sr.*|loop.*|ram.*|fd.*\", cluster=~\"$environment\", job=~\"$job\", instance=~\"$instance\"}[$__rate_interval]))",
+              "refId": "A",
+              "legendFormat": "{{instance}} {{device}}",
+              "instant": false,
+              "range": true,
+              "interval": "1m"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 12,
+                "gradientMode": "opacity",
+                "showPoints": "auto",
+                "pointSize": 4,
+                "spanNulls": true,
+                "axisSoftMin": 0,
+                "lineInterpolation": "smooth"
+              },
+              "color": {
+                "mode": "palette-classic"
+              },
+              "min": 0,
+              "max": 100,
+              "decimals": 0
+            },
+            "overrides": []
           },
-          "min": 0
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "calcs": [
+                "mean",
+                "max"
+              ],
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
         },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
+        {
+          "id": 19,
+          "type": "timeseries",
+          "title": "Disk throughput",
+          "gridPos": {
+            "h": 8,
+            "w": 24,
+            "x": 0,
+            "y": 48
+          },
+          "description": "Bytes read (up) and written (down) per second, all disks of a machine.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "gaas-mimir"
+              },
+              "expr": "sum by (cluster, instance) (rate(node_disk_read_bytes_total{device!~\"sr.*|loop.*|ram.*|fd.*\", cluster=~\"$environment\", job=~\"$job\", instance=~\"$instance\"}[$__rate_interval]))",
+              "refId": "A",
+              "legendFormat": "{{instance}} read",
+              "instant": false,
+              "range": true,
+              "interval": "1m"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "gaas-mimir"
+              },
+              "expr": "sum by (cluster, instance) (rate(node_disk_written_bytes_total{device!~\"sr.*|loop.*|ram.*|fd.*\", cluster=~\"$environment\", job=~\"$job\", instance=~\"$instance\"}[$__rate_interval]))",
+              "refId": "B",
+              "legendFormat": "{{instance}} write",
+              "instant": false,
+              "range": true,
+              "interval": "1m"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "Bps",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 12,
+                "gradientMode": "opacity",
+                "showPoints": "auto",
+                "pointSize": 4,
+                "spanNulls": true,
+                "axisSoftMin": 0,
+                "lineInterpolation": "smooth"
+              },
+              "color": {
+                "mode": "palette-classic"
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byRegexp",
+                  "options": ".* write"
+                },
+                "properties": [
+                  {
+                    "id": "custom.transform",
+                    "value": "negative-Y"
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "calcs": [
+                "mean",
+                "max"
+              ],
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
         }
-      }
+      ]
+    },
+    {
+      "id": 20,
+      "type": "row",
+      "title": "Network",
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 40
+      },
+      "panels": [
+        {
+          "id": 21,
+          "type": "timeseries",
+          "title": "Network traffic",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 41
+          },
+          "description": "Bits received (up) and sent (down) per second, physical interfaces only.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "gaas-mimir"
+              },
+              "expr": "sum by (cluster, instance) (rate(node_network_receive_bytes_total{device!~\"lo|veth.*|cali.*|flannel.*|cni.*|docker.*|br-.*|virbr.*|tunl.*|vxlan.*|kube-ipvs.*|lxc.*|gke.*|eni.*|azv.*\", cluster=~\"$environment\", job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) * 8",
+              "refId": "A",
+              "legendFormat": "{{instance}} in",
+              "instant": false,
+              "range": true,
+              "interval": "1m"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "gaas-mimir"
+              },
+              "expr": "sum by (cluster, instance) (rate(node_network_transmit_bytes_total{device!~\"lo|veth.*|cali.*|flannel.*|cni.*|docker.*|br-.*|virbr.*|tunl.*|vxlan.*|kube-ipvs.*|lxc.*|gke.*|eni.*|azv.*\", cluster=~\"$environment\", job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) * 8",
+              "refId": "B",
+              "legendFormat": "{{instance}} out",
+              "instant": false,
+              "range": true,
+              "interval": "1m"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bps",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 12,
+                "gradientMode": "opacity",
+                "showPoints": "auto",
+                "pointSize": 4,
+                "spanNulls": true,
+                "axisSoftMin": 0,
+                "lineInterpolation": "smooth"
+              },
+              "color": {
+                "mode": "palette-classic"
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byRegexp",
+                  "options": ".* out"
+                },
+                "properties": [
+                  {
+                    "id": "custom.transform",
+                    "value": "negative-Y"
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "calcs": [
+                "mean",
+                "max"
+              ],
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "id": 22,
+          "type": "timeseries",
+          "title": "Network errors and drops",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 41
+          },
+          "description": "Packets per second that failed or were dropped, in and out.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "gaas-mimir"
+              },
+              "expr": "sum by (cluster, instance) (rate(node_network_receive_errs_total{device!~\"lo|veth.*|cali.*|flannel.*|cni.*|docker.*|br-.*|virbr.*|tunl.*|vxlan.*|kube-ipvs.*|lxc.*|gke.*|eni.*|azv.*\", cluster=~\"$environment\", job=~\"$job\", instance=~\"$instance\"}[$__rate_interval]) + rate(node_network_transmit_errs_total{device!~\"lo|veth.*|cali.*|flannel.*|cni.*|docker.*|br-.*|virbr.*|tunl.*|vxlan.*|kube-ipvs.*|lxc.*|gke.*|eni.*|azv.*\", cluster=~\"$environment\", job=~\"$job\", instance=~\"$instance\"}[$__rate_interval]))",
+              "refId": "A",
+              "legendFormat": "{{instance}} errors",
+              "instant": false,
+              "range": true,
+              "interval": "1m"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "gaas-mimir"
+              },
+              "expr": "sum by (cluster, instance) (rate(node_network_receive_drop_total{device!~\"lo|veth.*|cali.*|flannel.*|cni.*|docker.*|br-.*|virbr.*|tunl.*|vxlan.*|kube-ipvs.*|lxc.*|gke.*|eni.*|azv.*\", cluster=~\"$environment\", job=~\"$job\", instance=~\"$instance\"}[$__rate_interval]) + rate(node_network_transmit_drop_total{device!~\"lo|veth.*|cali.*|flannel.*|cni.*|docker.*|br-.*|virbr.*|tunl.*|vxlan.*|kube-ipvs.*|lxc.*|gke.*|eni.*|azv.*\", cluster=~\"$environment\", job=~\"$job\", instance=~\"$instance\"}[$__rate_interval]))",
+              "refId": "B",
+              "legendFormat": "{{instance}} drops",
+              "instant": false,
+              "range": true,
+              "interval": "1m"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "pps",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 12,
+                "gradientMode": "opacity",
+                "showPoints": "auto",
+                "pointSize": 4,
+                "spanNulls": true,
+                "axisSoftMin": 0,
+                "lineInterpolation": "smooth"
+              },
+              "color": {
+                "mode": "palette-classic"
+              },
+              "min": 0,
+              "decimals": 2
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "calcs": [
+                "mean",
+                "max"
+              ],
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        }
+      ]
     }
   ]
 }
