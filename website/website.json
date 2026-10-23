@@ -3,6 +3,7 @@
   "title": "Website",
   "description": "What visitors' browsers report about this website: traffic, speed, errors. Sent by the Grafana Faro Web SDK snippet on the site's pages.",
   "tags": [
+    "telopi",
     "gaas",
     "website"
   ],
@@ -56,9 +57,11 @@
             "type": "loki",
             "uid": "gaas-loki"
           },
-          "expr": "sum(count_over_time({source=\"faro\"} |= \"faro.performance.navigation\" | logfmt | event_name=\"faro.performance.navigation\" [$__range]))",
+          "expr": "sum(count_over_time({source=\"faro\"} |= \"faro.performance.navigation\" | logfmt | event_name=\"faro.performance.navigation\" [$__interval]))",
           "refId": "A",
-          "queryType": "instant"
+          "queryType": "instant",
+          "instant": false,
+          "range": true
         }
       ],
       "fieldConfig": {
@@ -68,25 +71,33 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "text",
+                "color": "#4e80ee",
                 "value": null
               }
             ]
-          }
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "0"
         },
         "overrides": []
       },
       "options": {
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "sum"
           ],
           "fields": "",
           "values": false
         },
         "colorMode": "value",
-        "graphMode": "none",
-        "textMode": "auto"
+        "graphMode": "area",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
       }
     },
     {
@@ -126,6 +137,9 @@
                 "value": null
               }
             ]
+          },
+          "color": {
+            "mode": "thresholds"
           }
         },
         "overrides": []
@@ -140,7 +154,11 @@
         },
         "colorMode": "value",
         "graphMode": "none",
-        "textMode": "auto"
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
       }
     },
     {
@@ -164,9 +182,11 @@
             "type": "loki",
             "uid": "gaas-loki"
           },
-          "expr": "sum(count_over_time({source=\"faro\"} |= \"kind=exception\" | logfmt | kind=\"exception\" [$__range])) or vector(0)",
+          "expr": "sum(count_over_time({source=\"faro\"} |= \"kind=exception\" | logfmt | kind=\"exception\" [$__interval]))",
           "refId": "A",
-          "queryType": "instant"
+          "queryType": "instant",
+          "instant": false,
+          "range": true
         }
       ],
       "fieldConfig": {
@@ -176,29 +196,37 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#22c55e",
                 "value": null
               },
               {
-                "color": "red",
+                "color": "#fb923c",
                 "value": 1
               }
             ]
-          }
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "0"
         },
         "overrides": []
       },
       "options": {
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "sum"
           ],
           "fields": "",
           "values": false
         },
         "colorMode": "value",
-        "graphMode": "none",
-        "textMode": "auto"
+        "graphMode": "area",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
       }
     },
     {
@@ -234,14 +262,17 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#22c55e",
                 "value": null
               },
               {
-                "color": "red",
+                "color": "#fb923c",
                 "value": 1
               }
             ]
+          },
+          "color": {
+            "mode": "thresholds"
           }
         },
         "overrides": []
@@ -256,7 +287,11 @@
         },
         "colorMode": "value",
         "graphMode": "none",
-        "textMode": "auto"
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
       }
     },
     {
@@ -292,18 +327,21 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#22c55e",
                 "value": null
               },
               {
-                "color": "orange",
+                "color": "#fb923c",
                 "value": 2500
               },
               {
-                "color": "red",
+                "color": "#f87171",
                 "value": 5000
               }
             ]
+          },
+          "color": {
+            "mode": "thresholds"
           }
         },
         "overrides": []
@@ -318,7 +356,11 @@
         },
         "colorMode": "value",
         "graphMode": "none",
-        "textMode": "auto"
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
       }
     },
     {
@@ -358,6 +400,9 @@
                 "value": null
               }
             ]
+          },
+          "color": {
+            "mode": "thresholds"
           }
         },
         "overrides": []
@@ -372,14 +417,18 @@
         },
         "colorMode": "value",
         "graphMode": "none",
-        "textMode": "auto"
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
       }
     },
     {
       "id": 8,
       "type": "timeseries",
       "title": "Page loads over time",
-      "description": "",
+      "description": "Full page loads in each interval.",
       "datasource": {
         "type": "loki",
         "uid": "gaas-loki"
@@ -408,8 +457,15 @@
           "custom": {
             "drawStyle": "bars",
             "fillOpacity": 60,
-            "showPoints": "never",
-            "spanNulls": true
+            "showPoints": "auto",
+            "spanNulls": true,
+            "lineWidth": 2,
+            "gradientMode": "opacity",
+            "pointSize": 4
+          },
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#4e80ee"
           }
         },
         "overrides": []
@@ -428,7 +484,7 @@
       "id": 9,
       "type": "timeseries",
       "title": "Errors over time",
-      "description": "",
+      "description": "JavaScript errors visitors' browsers reported in each interval.",
       "datasource": {
         "type": "loki",
         "uid": "gaas-loki"
@@ -457,8 +513,15 @@
           "custom": {
             "drawStyle": "bars",
             "fillOpacity": 60,
-            "showPoints": "never",
-            "spanNulls": true
+            "showPoints": "auto",
+            "spanNulls": true,
+            "lineWidth": 2,
+            "gradientMode": "opacity",
+            "pointSize": 4
+          },
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#f87171"
           }
         },
         "overrides": []
@@ -518,18 +581,21 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#22c55e",
                 "value": null
               },
               {
-                "color": "orange",
+                "color": "#fb923c",
                 "value": 2500
               },
               {
-                "color": "red",
+                "color": "#f87171",
                 "value": 4000
               }
             ]
+          },
+          "color": {
+            "mode": "thresholds"
           }
         },
         "overrides": []
@@ -544,7 +610,11 @@
         },
         "colorMode": "value",
         "graphMode": "none",
-        "textMode": "auto"
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
       }
     },
     {
@@ -580,18 +650,21 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#22c55e",
                 "value": null
               },
               {
-                "color": "orange",
+                "color": "#fb923c",
                 "value": 1800
               },
               {
-                "color": "red",
+                "color": "#f87171",
                 "value": 3000
               }
             ]
+          },
+          "color": {
+            "mode": "thresholds"
           }
         },
         "overrides": []
@@ -606,7 +679,11 @@
         },
         "colorMode": "value",
         "graphMode": "none",
-        "textMode": "auto"
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
       }
     },
     {
@@ -642,18 +719,21 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#22c55e",
                 "value": null
               },
               {
-                "color": "orange",
+                "color": "#fb923c",
                 "value": 800
               },
               {
-                "color": "red",
+                "color": "#f87171",
                 "value": 1800
               }
             ]
+          },
+          "color": {
+            "mode": "thresholds"
           }
         },
         "overrides": []
@@ -668,7 +748,11 @@
         },
         "colorMode": "value",
         "graphMode": "none",
-        "textMode": "auto"
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
       }
     },
     {
@@ -704,20 +788,23 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#22c55e",
                 "value": null
               },
               {
-                "color": "orange",
+                "color": "#fb923c",
                 "value": 0.1
               },
               {
-                "color": "red",
+                "color": "#f87171",
                 "value": 0.25
               }
             ]
           },
-          "decimals": 3
+          "decimals": 3,
+          "color": {
+            "mode": "thresholds"
+          }
         },
         "overrides": []
       },
@@ -731,7 +818,11 @@
         },
         "colorMode": "value",
         "graphMode": "none",
-        "textMode": "auto"
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
       }
     },
     {
@@ -767,18 +858,21 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#22c55e",
                 "value": null
               },
               {
-                "color": "orange",
+                "color": "#fb923c",
                 "value": 200
               },
               {
-                "color": "red",
+                "color": "#f87171",
                 "value": 500
               }
             ]
+          },
+          "color": {
+            "mode": "thresholds"
           }
         },
         "overrides": []
@@ -793,7 +887,11 @@
         },
         "colorMode": "value",
         "graphMode": "none",
-        "textMode": "auto"
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
       }
     },
     {
@@ -829,14 +927,17 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#22c55e",
                 "value": null
               },
               {
-                "color": "orange",
+                "color": "#fb923c",
                 "value": 1
               }
             ]
+          },
+          "color": {
+            "mode": "thresholds"
           }
         },
         "overrides": []
@@ -851,7 +952,11 @@
         },
         "colorMode": "value",
         "graphMode": "none",
-        "textMode": "auto"
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
       }
     },
     {
@@ -886,9 +991,13 @@
           "unit": "ms",
           "custom": {
             "drawStyle": "line",
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": true
+            "fillOpacity": 12,
+            "showPoints": "auto",
+            "spanNulls": true,
+            "lineWidth": 2,
+            "gradientMode": "opacity",
+            "pointSize": 4,
+            "lineInterpolation": "smooth"
           }
         },
         "overrides": []
@@ -1297,130 +1406,148 @@
       "id": 25,
       "type": "row",
       "title": "Errors",
-      "collapsed": false,
+      "collapsed": true,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
         "y": 43
-      }
-    },
-    {
-      "id": 26,
-      "type": "table",
-      "title": "Errors by message",
-      "description": "",
-      "datasource": {
-        "type": "loki",
-        "uid": "gaas-loki"
       },
-      "gridPos": {
-        "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 44
-      },
-      "targets": [
+      "panels": [
         {
+          "id": 26,
+          "type": "table",
+          "title": "Errors by message",
+          "description": "",
           "datasource": {
             "type": "loki",
             "uid": "gaas-loki"
           },
-          "expr": "topk(50, sum by (type, value, page_url) (count_over_time({source=\"faro\"} |= \"kind=exception\" | logfmt | kind=\"exception\" [$__range])))",
-          "refId": "A",
-          "queryType": "instant"
-        }
-      ],
-      "transformations": [
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "Time": true
-            },
-            "renameByName": {
-              "Value #A": "Count",
-              "Value": "Count",
-              "type": "Type",
-              "value": "Message",
-              "page_url": "Page"
-            }
-          }
-        },
-        {
-          "id": "sortBy",
-          "options": {
-            "sort": [
-              {
-                "field": "Count",
-                "desc": true
-              }
-            ]
-          }
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "filterable": false
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Count"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "short"
+          "gridPos": {
+            "h": 8,
+            "w": 24,
+            "x": 0,
+            "y": 44
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "loki",
+                "uid": "gaas-loki"
               },
+              "expr": "topk(50, sum by (type, value, page_url) (count_over_time({source=\"faro\"} |= \"kind=exception\" | logfmt | kind=\"exception\" [$__range])))",
+              "refId": "A",
+              "queryType": "instant"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true
+                },
+                "renameByName": {
+                  "Value #A": "Count",
+                  "Value": "Count",
+                  "type": "Type",
+                  "value": "Message",
+                  "page_url": "Page"
+                }
+              }
+            },
+            {
+              "id": "sortBy",
+              "options": {
+                "sort": [
+                  {
+                    "field": "Count",
+                    "desc": true
+                  }
+                ]
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "filterable": false
+              }
+            },
+            "overrides": [
               {
-                "id": "custom.width",
-                "value": 130
+                "matcher": {
+                  "id": "byName",
+                  "options": "Count"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "short"
+                  },
+                  {
+                    "id": "custom.width",
+                    "value": 130
+                  }
+                ]
               }
             ]
+          },
+          "options": {
+            "showHeader": true
           }
-        ]
-      },
-      "options": {
-        "showHeader": true
-      }
-    },
-    {
-      "id": 27,
-      "type": "logs",
-      "title": "Latest errors",
-      "datasource": {
-        "type": "loki",
-        "uid": "gaas-loki"
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 24,
-        "x": 0,
-        "y": 52
-      },
-      "targets": [
+        },
         {
+          "id": 27,
+          "type": "logs",
+          "title": "Latest errors",
           "datasource": {
             "type": "loki",
             "uid": "gaas-loki"
           },
-          "expr": "{source=\"faro\"} |= \"kind=exception\" | logfmt | kind=\"exception\" | line_format \"{{.type}}: {{.value}}  ({{.page_url}}, {{.browser_name}} on {{.browser_os}})\"",
-          "refId": "A",
-          "queryType": "range",
-          "maxLines": 100
+          "gridPos": {
+            "h": 9,
+            "w": 24,
+            "x": 0,
+            "y": 52
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "loki",
+                "uid": "gaas-loki"
+              },
+              "expr": "{source=\"faro\"} |= \"kind=exception\" | logfmt | kind=\"exception\" | line_format \"{{.type}}: {{.value}}  ({{.page_url}}, {{.browser_name}} on {{.browser_os}})\"",
+              "refId": "A",
+              "queryType": "range",
+              "maxLines": 100
+            }
+          ],
+          "options": {
+            "showTime": true,
+            "wrapLogMessage": true,
+            "sortOrder": "Descending",
+            "enableLogDetails": true,
+            "dedupStrategy": "none"
+          }
         }
+      ]
+    }
+  ],
+  "links": [
+    {
+      "type": "dashboards",
+      "tags": [
+        "telopi"
       ],
-      "options": {
-        "showTime": true,
-        "wrapLogMessage": true,
-        "sortOrder": "Descending",
-        "enableLogDetails": true,
-        "dedupStrategy": "none"
-      }
+      "asDropdown": true,
+      "title": "Telopi dashboards",
+      "includeVars": false,
+      "keepTime": true,
+      "targetBlank": false,
+      "icon": "external link",
+      "tooltip": "",
+      "url": ""
     }
   ]
 }
