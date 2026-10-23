@@ -1,0 +1,1890 @@
+{
+  "uid": "telopi-kubernetes-workloads",
+  "title": "Kubernetes: workloads",
+  "description": "Deployments, StatefulSets, DaemonSets and Jobs in each environment: whether they have the pods they want, containers that cannot start or ran out of memory, and the CPU and memory they use against their requests and limits.",
+  "tags": [
+    "telopi",
+    "kubernetes"
+  ],
+  "timezone": "browser",
+  "editable": true,
+  "graphTooltip": 1,
+  "schemaVersion": 41,
+  "version": 1,
+  "refresh": "1m",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "links": [
+    {
+      "type": "dashboards",
+      "tags": [
+        "telopi"
+      ],
+      "asDropdown": true,
+      "title": "Telopi dashboards",
+      "includeVars": false,
+      "keepTime": true,
+      "targetBlank": false,
+      "icon": "external link",
+      "tooltip": "",
+      "url": ""
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "environment",
+        "label": "Environment",
+        "description": "An environment is a Kubernetes cluster, or any machines, that send to this Grafana under one name: the cluster label Alloy sets, which is the name given in the Telopi portal.",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "gaas-mimir"
+        },
+        "query": {
+          "query": "label_values(kube_pod_info, cluster)",
+          "refId": "environment",
+          "qryType": 1
+        },
+        "definition": "label_values(kube_pod_info, cluster)",
+        "refresh": 2,
+        "sort": 1,
+        "regex": "",
+        "multi": true,
+        "includeAll": true,
+        "hide": 0,
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "allValue": ".*"
+      },
+      {
+        "name": "namespace",
+        "label": "Namespace",
+        "description": "",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "gaas-mimir"
+        },
+        "query": {
+          "query": "label_values(kube_pod_info{cluster=~\"$environment\"}, namespace)",
+          "refId": "namespace",
+          "qryType": 1
+        },
+        "definition": "label_values(kube_pod_info{cluster=~\"$environment\"}, namespace)",
+        "refresh": 2,
+        "sort": 1,
+        "regex": "",
+        "multi": true,
+        "includeAll": true,
+        "hide": 0,
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "allValue": ".*"
+      },
+      {
+        "name": "workload",
+        "label": "Workload",
+        "description": "A Deployment, StatefulSet or DaemonSet. Its pods are those whose names start with its name.",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "gaas-mimir"
+        },
+        "query": {
+          "query": "query_result(max by (workload) (label_replace(kube_deployment_spec_replicas{cluster=~\"$environment\", namespace=~\"$namespace\"}, \"workload\", \"$1\", \"deployment\", \"(.+)\") or label_replace(kube_statefulset_replicas{cluster=~\"$environment\", namespace=~\"$namespace\"}, \"workload\", \"$1\", \"statefulset\", \"(.+)\") or label_replace(kube_daemonset_status_desired_number_scheduled{cluster=~\"$environment\", namespace=~\"$namespace\"}, \"workload\", \"$1\", \"daemonset\", \"(.+)\")))",
+          "refId": "workload",
+          "qryType": 1
+        },
+        "definition": "query_result(max by (workload) (label_replace(kube_deployment_spec_replicas{cluster=~\"$environment\", namespace=~\"$namespace\"}, \"workload\", \"$1\", \"deployment\", \"(.+)\") or label_replace(kube_statefulset_replicas{cluster=~\"$environment\", namespace=~\"$namespace\"}, \"workload\", \"$1\", \"statefulset\", \"(.+)\") or label_replace(kube_daemonset_status_desired_number_scheduled{cluster=~\"$environment\", namespace=~\"$namespace\"}, \"workload\", \"$1\", \"daemonset\", \"(.+)\")))",
+        "refresh": 2,
+        "sort": 1,
+        "regex": "/workload=\"([^\"]+)\"/",
+        "multi": true,
+        "includeAll": true,
+        "hide": 0,
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "allValue": ".*"
+      }
+    ]
+  },
+  "annotations": {
+    "list": []
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Overview",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "panels": []
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Workloads",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 1
+      },
+      "description": "Deployments, StatefulSets and DaemonSets, and those with fewer pods available than they want.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "(count(kube_deployment_spec_replicas{cluster=~\"$environment\", namespace=~\"$namespace\", deployment=~\"$workload\"} ) or vector(0)) + (count(kube_statefulset_replicas{cluster=~\"$environment\", namespace=~\"$namespace\", statefulset=~\"$workload\"} ) or vector(0)) + (count(kube_daemonset_status_desired_number_scheduled{cluster=~\"$environment\", namespace=~\"$namespace\", daemonset=~\"$workload\"} ) or vector(0))",
+          "refId": "A",
+          "legendFormat": "All",
+          "instant": true,
+          "range": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "(count(kube_deployment_spec_replicas{cluster=~\"$environment\", namespace=~\"$namespace\", deployment=~\"$workload\"} > kube_deployment_status_replicas_available{cluster=~\"$environment\", namespace=~\"$namespace\", deployment=~\"$workload\"}) or vector(0)) + (count(kube_statefulset_replicas{cluster=~\"$environment\", namespace=~\"$namespace\", statefulset=~\"$workload\"} > kube_statefulset_status_replicas_ready{cluster=~\"$environment\", namespace=~\"$namespace\", statefulset=~\"$workload\"}) or vector(0)) + (count(kube_daemonset_status_desired_number_scheduled{cluster=~\"$environment\", namespace=~\"$namespace\", daemonset=~\"$workload\"} > kube_daemonset_status_number_available{cluster=~\"$environment\", namespace=~\"$namespace\", daemonset=~\"$workload\"}) or vector(0))",
+          "refId": "B",
+          "legendFormat": "Short of pods",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "All"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "#4e80ee",
+                      "value": null
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Short of pods"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "#22c55e",
+                      "value": null
+                    },
+                    {
+                      "color": "#f87171",
+                      "value": 1
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Cannot start",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 1
+      },
+      "description": "Containers crash-looping, or waiting for an image, a secret or a config.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "sum(kube_pod_container_status_waiting_reason{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\", reason=~\"CrashLoopBackOff|ImagePullBackOff|ErrImagePull|CreateContainerConfigError|CreateContainerError|InvalidImageName\"}) or vector(0)",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "interval": "1m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#22c55e",
+                "value": null
+              },
+              {
+                "color": "#f87171",
+                "value": 1
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Restarts, last hour",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 1
+      },
+      "description": "Container restarts in the last hour.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "sum(increase(kube_pod_container_status_restarts_total{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\"}[1h])) or vector(0)",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "interval": "1m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#22c55e",
+                "value": null
+              },
+              {
+                "color": "#fb923c",
+                "value": 1
+              },
+              {
+                "color": "#f87171",
+                "value": 10
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Out of memory",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 1
+      },
+      "description": "Containers whose last run was killed for using more memory than their limit (OOMKilled).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "sum(kube_pod_container_status_last_terminated_reason{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\", reason=\"OOMKilled\"}) or vector(0)",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "interval": "1m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#22c55e",
+                "value": null
+              },
+              {
+                "color": "#fb923c",
+                "value": 1
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Failed jobs",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 1
+      },
+      "description": "Jobs that failed and are still in the cluster.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "sum(kube_job_failed{cluster=~\"$environment\", namespace=~\"$namespace\", job_name=~\"($workload)(-.*)?\", condition=\"true\"}) or vector(0)",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "interval": "1m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#22c55e",
+                "value": null
+              },
+              {
+                "color": "#fb923c",
+                "value": 1
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Used",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 1
+      },
+      "description": "Cores and memory (working set) the containers use. Needs cAdvisor's metrics.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "sum(rate(container_cpu_usage_seconds_total{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\", container!=\"\", image!=\"\"}[$__rate_interval]))",
+          "refId": "A",
+          "legendFormat": "CPU cores",
+          "instant": false,
+          "range": true,
+          "interval": "1m"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "sum(container_memory_working_set_bytes{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\", container!=\"\", image!=\"\"})",
+          "refId": "B",
+          "legendFormat": "Memory",
+          "instant": false,
+          "range": true,
+          "interval": "1m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#4e80ee",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 1,
+          "noValue": "No cAdvisor data"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Memory"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value_and_name",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 8,
+      "type": "row",
+      "title": "Workloads",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "panels": []
+    },
+    {
+      "id": 9,
+      "type": "table",
+      "title": "Workloads",
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 6
+      },
+      "description": "Each Deployment, StatefulSet and DaemonSet: the pods it wants and those available.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "max by (cluster, namespace, kind, workload) (label_replace(label_replace(kube_deployment_spec_replicas{cluster=~\"$environment\", namespace=~\"$namespace\", deployment=~\"$workload\"}, \"workload\", \"$1\", \"deployment\", \"(.+)\"), \"kind\", \"Deployment\", \"\", \"\") or label_replace(label_replace(kube_statefulset_replicas{cluster=~\"$environment\", namespace=~\"$namespace\", statefulset=~\"$workload\"}, \"workload\", \"$1\", \"statefulset\", \"(.+)\"), \"kind\", \"StatefulSet\", \"\", \"\") or label_replace(label_replace(kube_daemonset_status_desired_number_scheduled{cluster=~\"$environment\", namespace=~\"$namespace\", daemonset=~\"$workload\"}, \"workload\", \"$1\", \"daemonset\", \"(.+)\"), \"kind\", \"DaemonSet\", \"\", \"\"))",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "max by (cluster, namespace, kind, workload) (label_replace(label_replace(kube_deployment_status_replicas_available{cluster=~\"$environment\", namespace=~\"$namespace\", deployment=~\"$workload\"}, \"workload\", \"$1\", \"deployment\", \"(.+)\"), \"kind\", \"Deployment\", \"\", \"\") or label_replace(label_replace(kube_statefulset_status_replicas_ready{cluster=~\"$environment\", namespace=~\"$namespace\", statefulset=~\"$workload\"}, \"workload\", \"$1\", \"statefulset\", \"(.+)\"), \"kind\", \"StatefulSet\", \"\", \"\") or label_replace(label_replace(kube_daemonset_status_number_available{cluster=~\"$environment\", namespace=~\"$namespace\", daemonset=~\"$workload\"}, \"workload\", \"$1\", \"daemonset\", \"(.+)\"), \"kind\", \"DaemonSet\", \"\", \"\"))",
+          "refId": "B",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "max by (cluster, namespace, kind, workload) (label_replace(label_replace(kube_deployment_spec_replicas{cluster=~\"$environment\", namespace=~\"$namespace\", deployment=~\"$workload\"}, \"workload\", \"$1\", \"deployment\", \"(.+)\"), \"kind\", \"Deployment\", \"\", \"\") or label_replace(label_replace(kube_statefulset_replicas{cluster=~\"$environment\", namespace=~\"$namespace\", statefulset=~\"$workload\"}, \"workload\", \"$1\", \"statefulset\", \"(.+)\"), \"kind\", \"StatefulSet\", \"\", \"\") or label_replace(label_replace(kube_daemonset_status_desired_number_scheduled{cluster=~\"$environment\", namespace=~\"$namespace\", daemonset=~\"$workload\"}, \"workload\", \"$1\", \"daemonset\", \"(.+)\"), \"kind\", \"DaemonSet\", \"\", \"\")) - max by (cluster, namespace, kind, workload) (label_replace(label_replace(kube_deployment_status_replicas_available{cluster=~\"$environment\", namespace=~\"$namespace\", deployment=~\"$workload\"}, \"workload\", \"$1\", \"deployment\", \"(.+)\"), \"kind\", \"Deployment\", \"\", \"\") or label_replace(label_replace(kube_statefulset_status_replicas_ready{cluster=~\"$environment\", namespace=~\"$namespace\", statefulset=~\"$workload\"}, \"workload\", \"$1\", \"statefulset\", \"(.+)\"), \"kind\", \"StatefulSet\", \"\", \"\") or label_replace(label_replace(kube_daemonset_status_number_available{cluster=~\"$environment\", namespace=~\"$namespace\", daemonset=~\"$workload\"}, \"workload\", \"$1\", \"daemonset\", \"(.+)\"), \"kind\", \"DaemonSet\", \"\", \"\"))",
+          "refId": "C",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {
+              "cluster": 0,
+              "namespace": 1,
+              "kind": 2,
+              "workload": 3,
+              "Value #A": 4,
+              "Value #B": 5,
+              "Value #C": 6
+            },
+            "renameByName": {
+              "cluster": "Environment",
+              "namespace": "Namespace",
+              "kind": "Kind",
+              "workload": "Workload",
+              "Value #A": "Wanted",
+              "Value #B": "Available",
+              "Value #C": "Missing"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "filterable": true,
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Wanted"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Available"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Missing"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "#22c55e",
+                      "value": null
+                    },
+                    {
+                      "color": "#f87171",
+                      "value": 1
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 100
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "sortBy": [
+          {
+            "displayName": "Missing",
+            "desc": true
+          }
+        ]
+      }
+    },
+    {
+      "id": 10,
+      "type": "table",
+      "title": "Containers that need a look",
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 15
+      },
+      "description": "Waiting now: why a container cannot start. Last stopped: why its last run ended, out of memory (OOMKilled) or with an error.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "max by (cluster, namespace, pod, container, state, reason) (label_replace(kube_pod_container_status_waiting_reason{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\", reason=~\"CrashLoopBackOff|ImagePullBackOff|ErrImagePull|CreateContainerConfigError|CreateContainerError|InvalidImageName\"} > 0, \"state\", \"Waiting now\", \"\", \"\") or label_replace(kube_pod_container_status_last_terminated_reason{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\", reason=~\"OOMKilled|Error|ContainerCannotRun\"} > 0, \"state\", \"Last stopped\", \"\", \"\"))",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Value": true
+            },
+            "indexByName": {
+              "cluster": 0,
+              "namespace": 1,
+              "pod": 2,
+              "container": 3,
+              "state": 4,
+              "reason": 5
+            },
+            "renameByName": {
+              "cluster": "Environment",
+              "namespace": "Namespace",
+              "pod": "Pod",
+              "container": "Container",
+              "state": "State",
+              "reason": "Reason"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "filterable": true,
+            "cellOptions": {
+              "type": "auto"
+            }
+          },
+          "noValue": "Nothing to look at."
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "State"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "Waiting now": {
+                        "color": "#f87171",
+                        "index": 0
+                      },
+                      "Last stopped": {
+                        "color": "#fb923c",
+                        "index": 1
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "sortBy": [
+          {
+            "displayName": "State",
+            "desc": true
+          }
+        ]
+      }
+    },
+    {
+      "id": 11,
+      "type": "row",
+      "title": "CPU and memory",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 24
+      },
+      "panels": []
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "CPU used, by pod",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 25
+      },
+      "description": "Cores each pod's containers use.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "sum by (namespace, pod) (rate(container_cpu_usage_seconds_total{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\", container!=\"\", image!=\"\"}[$__rate_interval]))",
+          "refId": "A",
+          "legendFormat": "{{namespace}}/{{pod}}",
+          "instant": false,
+          "range": true,
+          "interval": "1m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": true,
+            "axisSoftMin": 0,
+            "lineInterpolation": "smooth"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0,
+          "decimals": 2,
+          "noValue": "No cAdvisor data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "CPU: used, requested, limit",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 25
+      },
+      "description": "All selected pods together, in cores. Above the limit a container is throttled.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "sum(rate(container_cpu_usage_seconds_total{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\", container!=\"\", image!=\"\"}[$__rate_interval]))",
+          "refId": "A",
+          "legendFormat": "Used",
+          "instant": false,
+          "range": true,
+          "interval": "1m"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "sum(kube_pod_container_resource_requests{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\", resource=\"cpu\"} * on (cluster, namespace, pod) group_left () max by (cluster, namespace, pod) (kube_pod_status_phase{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\", phase=~\"Pending|Running\"}))",
+          "refId": "B",
+          "legendFormat": "Requested",
+          "instant": false,
+          "range": true,
+          "interval": "1m"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "sum(kube_pod_container_resource_limits{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\", resource=\"cpu\"} * on (cluster, namespace, pod) group_left () max by (cluster, namespace, pod) (kube_pod_status_phase{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\", phase=~\"Pending|Running\"}))",
+          "refId": "C",
+          "legendFormat": "Limit",
+          "instant": false,
+          "range": true,
+          "interval": "1m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": true,
+            "axisSoftMin": 0,
+            "lineInterpolation": "smooth"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0,
+          "decimals": 2
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Used"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#4e80ee"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Requested"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#fb923c"
+                }
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    8,
+                    6
+                  ]
+                }
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Limit"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#f87171"
+                }
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    8,
+                    6
+                  ]
+                }
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": [],
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "Memory used, by pod",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 33
+      },
+      "description": "Each pod's working set, what counts against its limit.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "sum by (namespace, pod) (container_memory_working_set_bytes{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\", container!=\"\", image!=\"\"})",
+          "refId": "A",
+          "legendFormat": "{{namespace}}/{{pod}}",
+          "instant": false,
+          "range": true,
+          "interval": "1m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": true,
+            "axisSoftMin": 0,
+            "lineInterpolation": "smooth"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0,
+          "noValue": "No cAdvisor data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 15,
+      "type": "timeseries",
+      "title": "Memory: used, requested, limit",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 33
+      },
+      "description": "All selected pods together. A container over its memory limit is killed (OOMKilled).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "sum(container_memory_working_set_bytes{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\", container!=\"\", image!=\"\"})",
+          "refId": "A",
+          "legendFormat": "Used",
+          "instant": false,
+          "range": true,
+          "interval": "1m"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "sum(kube_pod_container_resource_requests{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\", resource=\"memory\"} * on (cluster, namespace, pod) group_left () max by (cluster, namespace, pod) (kube_pod_status_phase{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\", phase=~\"Pending|Running\"}))",
+          "refId": "B",
+          "legendFormat": "Requested",
+          "instant": false,
+          "range": true,
+          "interval": "1m"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "sum(kube_pod_container_resource_limits{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\", resource=\"memory\"} * on (cluster, namespace, pod) group_left () max by (cluster, namespace, pod) (kube_pod_status_phase{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\", phase=~\"Pending|Running\"}))",
+          "refId": "C",
+          "legendFormat": "Limit",
+          "instant": false,
+          "range": true,
+          "interval": "1m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": true,
+            "axisSoftMin": 0,
+            "lineInterpolation": "smooth"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Used"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#4e80ee"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Requested"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#fb923c"
+                }
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    8,
+                    6
+                  ]
+                }
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Limit"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#f87171"
+                }
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    8,
+                    6
+                  ]
+                }
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": [],
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 16,
+      "type": "timeseries",
+      "title": "CPU throttled",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 41
+      },
+      "description": "The share of time slices in which a pod's containers wanted more CPU than their limit allows. Over 25% slows it noticeably.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "sum by (namespace, pod) (rate(container_cpu_cfs_throttled_periods_total{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\", container!=\"\", image!=\"\"}[$__rate_interval])) / sum by (namespace, pod) (rate(container_cpu_cfs_periods_total{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\", container!=\"\", image!=\"\"}[$__rate_interval]))",
+          "refId": "A",
+          "legendFormat": "{{namespace}}/{{pod}}",
+          "instant": false,
+          "range": true,
+          "interval": "1m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": true,
+            "axisSoftMin": 0,
+            "lineInterpolation": "smooth"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0,
+          "max": 1,
+          "noValue": "Nothing throttled, or no cAdvisor data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 17,
+      "type": "timeseries",
+      "title": "Restarts",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 41
+      },
+      "description": "Container restarts, by pod.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "sum by (namespace, pod) (increase(kube_pod_container_status_restarts_total{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\"}[$__rate_interval])) > 0",
+          "refId": "A",
+          "legendFormat": "{{namespace}}/{{pod}}",
+          "instant": false,
+          "range": true,
+          "interval": "1m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 2,
+            "fillOpacity": 60,
+            "gradientMode": "opacity",
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": true,
+            "axisSoftMin": 0,
+            "lineInterpolation": "smooth"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0,
+          "decimals": 0,
+          "noValue": "No restarts"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "sum"
+          ],
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 18,
+      "type": "row",
+      "title": "Network",
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 49
+      },
+      "panels": [
+        {
+          "id": 19,
+          "type": "timeseries",
+          "title": "Received, by pod",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 50
+          },
+          "description": "Bits a second into each pod. Needs cAdvisor's metrics.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "gaas-mimir"
+              },
+              "expr": "sum by (namespace, pod) (rate(container_network_receive_bytes_total{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\"}[$__rate_interval])) * 8",
+              "refId": "A",
+              "legendFormat": "{{namespace}}/{{pod}}",
+              "instant": false,
+              "range": true,
+              "interval": "1m"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bps",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 12,
+                "gradientMode": "opacity",
+                "showPoints": "auto",
+                "pointSize": 4,
+                "spanNulls": true,
+                "axisSoftMin": 0,
+                "lineInterpolation": "smooth"
+              },
+              "color": {
+                "mode": "palette-classic"
+              },
+              "min": 0
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "calcs": [
+                "mean",
+                "max"
+              ],
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "id": 20,
+          "type": "timeseries",
+          "title": "Sent, by pod",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 50
+          },
+          "description": "Bits a second out of each pod. Needs cAdvisor's metrics.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "gaas-mimir"
+              },
+              "expr": "sum by (namespace, pod) (rate(container_network_transmit_bytes_total{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\"}[$__rate_interval])) * 8",
+              "refId": "A",
+              "legendFormat": "{{namespace}}/{{pod}}",
+              "instant": false,
+              "range": true,
+              "interval": "1m"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bps",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 12,
+                "gradientMode": "opacity",
+                "showPoints": "auto",
+                "pointSize": 4,
+                "spanNulls": true,
+                "axisSoftMin": 0,
+                "lineInterpolation": "smooth"
+              },
+              "color": {
+                "mode": "palette-classic"
+              },
+              "min": 0
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "calcs": [
+                "mean",
+                "max"
+              ],
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "type": "row",
+      "title": "Jobs",
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 50
+      },
+      "panels": [
+        {
+          "id": 22,
+          "type": "table",
+          "title": "Jobs",
+          "gridPos": {
+            "h": 8,
+            "w": 24,
+            "x": 0,
+            "y": 51
+          },
+          "description": "Each Job still in the cluster, and how its pods ended. A CronJob's runs are Jobs named after it.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "gaas-mimir"
+              },
+              "expr": "max by (cluster, namespace, job_name) (kube_job_status_active{cluster=~\"$environment\", namespace=~\"$namespace\", job_name=~\"($workload)(-.*)?\"})",
+              "refId": "A",
+              "instant": true,
+              "range": false,
+              "format": "table"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "gaas-mimir"
+              },
+              "expr": "max by (cluster, namespace, job_name) (kube_job_status_succeeded{cluster=~\"$environment\", namespace=~\"$namespace\", job_name=~\"($workload)(-.*)?\"})",
+              "refId": "B",
+              "instant": true,
+              "range": false,
+              "format": "table"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "gaas-mimir"
+              },
+              "expr": "max by (cluster, namespace, job_name) (kube_job_status_failed{cluster=~\"$environment\", namespace=~\"$namespace\", job_name=~\"($workload)(-.*)?\"})",
+              "refId": "C",
+              "instant": true,
+              "range": false,
+              "format": "table"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "merge",
+              "options": {}
+            },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true
+                },
+                "indexByName": {
+                  "cluster": 0,
+                  "namespace": 1,
+                  "job_name": 2,
+                  "Value #A": 3,
+                  "Value #B": 4,
+                  "Value #C": 5
+                },
+                "renameByName": {
+                  "cluster": "Environment",
+                  "namespace": "Namespace",
+                  "job_name": "Job",
+                  "Value #A": "Running",
+                  "Value #B": "Succeeded",
+                  "Value #C": "Failed"
+                }
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "auto",
+                "filterable": true,
+                "cellOptions": {
+                  "type": "auto"
+                }
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Running"
+                },
+                "properties": [
+                  {
+                    "id": "decimals",
+                    "value": 0
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Succeeded"
+                },
+                "properties": [
+                  {
+                    "id": "decimals",
+                    "value": 0
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Failed"
+                },
+                "properties": [
+                  {
+                    "id": "decimals",
+                    "value": 0
+                  },
+                  {
+                    "id": "thresholds",
+                    "value": {
+                      "mode": "absolute",
+                      "steps": [
+                        {
+                          "color": "#22c55e",
+                          "value": null
+                        },
+                        {
+                          "color": "#fb923c",
+                          "value": 1
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "thresholds"
+                    }
+                  },
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "type": "color-text"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "showHeader": true,
+            "cellHeight": "sm",
+            "footer": {
+              "show": false
+            },
+            "sortBy": [
+              {
+                "displayName": "Failed",
+                "desc": true
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
