@@ -1,0 +1,128 @@
+# Kubernetes: pods that cannot start or keep crashing, workloads short of
+# pods, containers killed for memory, failed jobs, nodes not ready, volumes
+# filling up and CPU limits that slow a container down. Mimir evaluates them
+# every minute over what kube-state-metrics, cAdvisor and the kubelet send, as
+# Grafana's Kubernetes monitoring chart and Alloy send them; the cluster label
+# they carry is the environment's name, the same as on the Kubernetes
+# dashboards (kubernetes/). A customer who sends none of it gets no alert.
+thresholds:
+  pod_not_ready_for:
+    default: 15m
+    description: How long a pod may stay pending, or on a node that stopped reporting, before it alerts.
+  volume_percent:
+    default: 90
+    description: How full a persistent volume may get, in percent, before it alerts.
+  throttled_percent:
+    default: 25
+    description: The share of a container's CPU time slices that may be throttled by its CPU limit, in percent, for 15 minutes before it alerts.
+groups:
+  - name: kubernetes
+    interval: 1m
+    rules:
+      - alert: PodCrashLooping
+        expr: max by (cluster, namespace, pod, container) (kube_pod_container_status_waiting_reason{reason="CrashLoopBackOff"}) == 1
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.namespace }}/{{ $labels.pod }} is crash-looping in the {{ $labels.cluster }} environment"
+          description: "The container {{ $labels.container }} keeps exiting, and Kubernetes waits longer before each restart. Its logs from before the last restart say why."
+      - alert: ImagePullBackOff
+        expr: max by (cluster, namespace, pod, container) (kube_pod_container_status_waiting_reason{reason=~"ImagePullBackOff|ErrImagePull"}) == 1
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.namespace }}/{{ $labels.pod }} cannot pull its image in the {{ $labels.cluster }} environment"
+          description: "The image of the container {{ $labels.container }} cannot be pulled: a wrong name or tag, or a registry that refuses the cluster's credentials."
+      # Not the pods of a Job: one that failed stays until the Job is deleted,
+      # and JobFailed says so once.
+      - alert: PodNotReady
+        expr: |
+          max by (cluster, namespace, pod) (kube_pod_status_phase{phase=~"Pending|Unknown"})
+            * on (cluster, namespace, pod) group_left () max by (cluster, namespace, pod) (kube_pod_owner{owner_kind!="Job"})
+            > 0
+        for: ${pod_not_ready_for}
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.namespace }}/{{ $labels.pod }} has not started for ${pod_not_ready_for} in the {{ $labels.cluster }} environment"
+          description: "The pod is pending, or its node stopped reporting: no node has room for what it requests, a volume cannot be attached, or the node is down."
+      - alert: DeploymentReplicasMismatch
+        expr: |
+          max by (cluster, namespace, deployment) (kube_deployment_spec_replicas)
+            > max by (cluster, namespace, deployment) (kube_deployment_status_replicas_available)
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.namespace }}/{{ $labels.deployment }} is short of pods in the {{ $labels.cluster }} environment"
+          description: "The deployment has had fewer pods available than it wants for 15 minutes: a rollout that is stuck, or pods that cannot start."
+      - alert: StatefulSetReplicasMismatch
+        expr: |
+          max by (cluster, namespace, statefulset) (kube_statefulset_replicas)
+            > max by (cluster, namespace, statefulset) (kube_statefulset_status_replicas_ready)
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.namespace }}/{{ $labels.statefulset }} is short of pods in the {{ $labels.cluster }} environment"
+          description: "The stateful set has had fewer pods ready than it wants for 15 minutes."
+      - alert: DaemonSetNotAvailable
+        expr: |
+          max by (cluster, namespace, daemonset) (kube_daemonset_status_desired_number_scheduled)
+            > max by (cluster, namespace, daemonset) (kube_daemonset_status_number_available)
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.namespace }}/{{ $labels.daemonset }} is missing on some nodes in the {{ $labels.cluster }} environment"
+          description: "The daemon set has had fewer pods available than nodes it should run on for 15 minutes."
+      # A restart in the last 10 minutes whose cause was memory.
+      - alert: ContainerOOMKilled
+        expr: |
+          max by (cluster, namespace, pod, container) (increase(kube_pod_container_status_restarts_total[10m])) >= 1
+            and on (cluster, namespace, pod, container)
+          max by (cluster, namespace, pod, container) (max_over_time(kube_pod_container_status_last_terminated_reason{reason="OOMKilled"}[10m])) == 1
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.namespace }}/{{ $labels.pod }} ran out of memory in the {{ $labels.cluster }} environment"
+          description: "The container {{ $labels.container }} used more memory than its limit and was killed. Raise the limit, or find what grows."
+      - alert: JobFailed
+        expr: max by (cluster, namespace, job_name) (kube_job_failed{condition="true"}) == 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "The job {{ $labels.namespace }}/{{ $labels.job_name }} failed in the {{ $labels.cluster }} environment"
+          description: "Its pods failed more often than it allows. It alerts until the job is deleted."
+      - alert: NodeNotReady
+        expr: max by (cluster, node) (kube_node_status_condition{condition="Ready", status="true"}) == 0
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: "The node {{ $labels.node }} is not ready in the {{ $labels.cluster }} environment"
+          description: "The node has not been ready for 15 minutes: it takes no new pods, and its pods may be moved elsewhere."
+      - alert: PersistentVolumeAlmostFull
+        expr: |
+          100 * max by (cluster, namespace, persistentvolumeclaim) (kubelet_volume_stats_used_bytes / kubelet_volume_stats_capacity_bytes)
+            > ${volume_percent}
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "The volume {{ $labels.namespace }}/{{ $labels.persistentvolumeclaim }} is {{ $value | printf \"%.0f\" }}% full in the {{ $labels.cluster }} environment"
+          description: "The volume has been over ${volume_percent}% full for 15 minutes. Free space, or grow the claim, before writes fail."
+      - alert: CPUThrottlingHigh
+        expr: |
+          100 * max by (cluster, namespace, pod, container) (increase(container_cpu_cfs_throttled_periods_total{container!=""}[5m]))
+            / max by (cluster, namespace, pod, container) (increase(container_cpu_cfs_periods_total{container!=""}[5m]))
+            > ${throttled_percent}
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.namespace }}/{{ $labels.pod }} is held back by its CPU limit in the {{ $labels.cluster }} environment"
+          description: "{{ $value | printf \"%.0f\" }}% of the container {{ $labels.container }}'s CPU time slices were throttled, over ${throttled_percent}% for 15 minutes: it wants more CPU than its limit. Raise the limit, or remove it."
