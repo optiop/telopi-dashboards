@@ -8,10 +8,35 @@ prometheus.exporter.mysql "mysql" {
   data_source_name = sys.env("MYSQL_DSN")
 }
 
+// A target on this machine (localhost) is named after the machine and its
+// port, so machines of one environment stay apart.
+discovery.relabel "mysql" {
+  targets = prometheus.exporter.mysql.mysql.targets
+
+  rule {
+    source_labels = ["instance"]
+    regex         = "(?:[a-z]+://|tcp\\()?(?:localhost|127\\.0\\.0\\.1|\\[::1\\])(:[0-9]+)?.*"
+    target_label  = "instance"
+    replacement   = constants.hostname + "$1"
+  }
+}
+
 prometheus.scrape "mysql" {
-  targets         = prometheus.exporter.mysql.mysql.targets
+  targets         = discovery.relabel.mysql.output
   scrape_interval = "60s"
-  forward_to      = [prometheus.remote_write.mysql.receiver]
+  forward_to      = [prometheus.relabel.mysql.receiver]
+}
+
+// Only what the dashboard, its alerts and the tile's check read:
+// the exporter sends several hundred status variables besides.
+prometheus.relabel "mysql" {
+  forward_to = [prometheus.remote_write.mysql.receiver]
+
+  rule {
+    source_labels = ["__name__"]
+    regex         = "mysql_global_status_aborted_clients|mysql_global_status_aborted_connects|mysql_global_status_bytes_received|mysql_global_status_bytes_sent|mysql_global_status_commands_total|mysql_global_status_created_tmp_disk_tables|mysql_global_status_innodb_buffer_pool_bytes_data|mysql_global_status_innodb_buffer_pool_read_requests|mysql_global_status_innodb_buffer_pool_reads|mysql_global_status_innodb_row_ops_total|mysql_global_status_queries|mysql_global_status_slow_queries|mysql_global_status_threads_connected|mysql_global_status_threads_running|mysql_global_variables_innodb_buffer_pool_size|mysql_global_variables_max_connections|mysql_slave_status_replica_io_running|mysql_slave_status_replica_sql_running|mysql_slave_status_seconds_behind_master|mysql_slave_status_seconds_behind_source|mysql_slave_status_slave_io_running|mysql_slave_status_slave_sql_running|mysql_up"
+    action        = "keep"
+  }
 }
 
 prometheus.remote_write "mysql" {

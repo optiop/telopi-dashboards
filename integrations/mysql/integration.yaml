@@ -19,4 +19,4 @@ settings:
     example: production
 env:
   - name: MYSQL_DSN
-    description: "The connection string of a monitoring user, with its password: telopi:PASSWORD@(localhost:3306)/"
+    description: "The connection string of a monitoring user, with its password: telopi:PASSWORD@(127.0.0.1:3306)/"
