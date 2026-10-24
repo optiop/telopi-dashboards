@@ -12,41 +12,47 @@ runs in the process as a Java agent and serves its metrics on a port of
 your choice; Alloy scrapes them once a minute: heap and non-heap memory
 used, committed and maximum, each memory pool, garbage collections and
 their time per collector, threads (live, daemon, deadlocked, by state),
-classes, CPU and open files. Each process is its own `instance`, named after
-the agent's address, and carries its environment's name in the `cluster`
-label.
+classes, CPU and open files. Alloy sends only the metrics the dashboard,
+the alerts and the tile's check read, and drops the rest. Each process is
+its own `instance`: an agent on the same machine as Alloy (`localhost`) is
+named after the machine and its port, any other after its address. Each
+carries its environment's name in the `cluster` label.
 
-The agent also turns the process's own MBeans into metrics (Kafka's,
-Tomcat's, your own), as its configuration says; they are sent too, and you
-can graph them in your own dashboards.
+The agent can also turn the process's own MBeans into metrics (Kafka's,
+Tomcat's, your own). The configuration below turns that off, and the
+snippet drops any that come anyway: an MBean can become thousands of
+series.
 
 The **JVM** dashboard shows the processes up, heap against its maximum,
 memory pools, time in GC and collections, threads and CPU.
 
 ## What you need
 
-- The agent's jar, `jmx_prometheus_javaagent-<version>.jar`, from the
+- The agent's jar, version 1.0 or later (the metric names the dashboard
+  reads are 1.x's), from the
   [JMX exporter's releases](https://github.com/prometheus/jmx_exporter/releases),
-  and a configuration file next to it. The smallest, which exports every
-  MBean, is:
+  for example `jmx_prometheus_javaagent-1.7.0.jar`, and next to it a
+  configuration file that turns no MBean into a metric, so only the JVM's
+  own metrics are served:
 
   ```yaml
-  rules:
-    - pattern: ".*"
+  # config.yaml: the JVM's own metrics (jvm_*, process_*) and none of its MBeans.
+  excludeObjectNames: ["*:*"]
   ```
 
-- The process started with the agent, its port and that file, for example:
+- The process started with the agent listening on 127.0.0.1 only, so
+  nothing outside the machine reads it, for example:
 
   ```sh
-  java -javaagent:/opt/jmx/jmx_prometheus_javaagent.jar=9404:/opt/jmx/config.yaml -jar app.jar
+  java -javaagent:/opt/jmx/jmx_prometheus_javaagent-1.7.0.jar=127.0.0.1:9404:/opt/jmx/config.yaml -jar app.jar
   ```
 
   For a program you do not start yourself, put the same `-javaagent:...`
   in its `JAVA_OPTS` (or, for Kafka, `KAFKA_OPTS`).
-- The agent's address, for `JVM_ADDRESS`, such as `localhost:9404`. For
-  more processes, add each address to `targets`.
+- The agent's address, for `JVM_ADDRESS`: `localhost:9404`, with Alloy on
+  the same machine. For more processes, add each address to `targets`.
 - [Grafana Alloy](https://grafana.com/docs/alloy/latest/set-up/install/) on
-  a machine that can reach that port.
+  that machine.
 - An ingest key from the Ingest keys page of the Telopi portal. Its username
   is in the snippet; set its password in the environment variable
   `TELOPI_PASSWORD` of the Alloy service (for systemd, in
@@ -61,8 +67,8 @@ restart Alloy. The process shows on the dashboard within two minutes.
 | Alert | Fires when | Threshold you can change |
 | --- | --- | --- |
 | JvmDown | Alloy cannot scrape a process: it is down, runs without the agent, or cannot be reached | `down_for`, 2 minutes |
-| JvmHeapNearlyFull | A process uses most of its maximum heap, for 10 minutes | `heap_percent`, 90% |
-| JvmGcTimeHigh | A process spends much of its time collecting garbage, for 10 minutes | `gc_percent`, 10% |
+| JvmHeapNearlyFull | A process's heap stays nearly full for 20 minutes, collections included (a heap that fills and empties again, as with `-Xms` equal to `-Xmx`, does not alert) | `heap_percent`, 95% |
+| JvmGcTimeHigh | A process spends much of its time in garbage collection pauses, for 10 minutes (concurrent collectors, which do not stop it, are left out) | `gc_percent`, 10% |
 | JvmThreadsDeadlocked | A process has deadlocked threads, for 2 minutes | |
 
 ## Source and licence

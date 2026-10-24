@@ -7,7 +7,7 @@ description: Heap and other memory, garbage collection, threads and CPU of each 
 signals: [metrics]
 check:
   datasource: mimir
-  query: group(max_over_time(jvm_memory_used_bytes[1h]))
+  query: group(max_over_time(jmx_exporter_build_info[1h]))
 install: alloy
 dashboards:
   - uid: telopi-jvm

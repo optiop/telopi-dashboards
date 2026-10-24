@@ -334,7 +334,7 @@
         "x": 12,
         "y": 1
       },
-      "description": "The highest share of time any selected process spends collecting garbage.",
+      "description": "The highest share of time any selected process spends in garbage collection pauses. Concurrent collectors, which run beside the application, are left out.",
       "datasource": {
         "type": "prometheus",
         "uid": "gaas-mimir"
@@ -345,7 +345,7 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "max(100 * sum by (cluster, instance) (rate(jvm_gc_collection_seconds_sum{cluster=~\"$environment\", instance=~\"$instance\"}[$__rate_interval])))",
+          "expr": "max(100 * sum by (cluster, instance) (rate(jvm_gc_collection_seconds_sum{cluster=~\"$environment\", instance=~\"$instance\", gc!~\".*(Concurrent|Cycles).*\"}[$__rate_interval])))",
           "refId": "A",
           "instant": false,
           "range": true,
@@ -856,7 +856,7 @@
         "x": 0,
         "y": 23
       },
-      "description": "Share of time each collector runs. Over a few percent, the process spends its time collecting instead of working.",
+      "description": "Share of time each collector runs. Pause collectors stop the application; concurrent ones (G1 Concurrent GC, ZGC Cycles) run beside it, so their share is not time lost.",
       "datasource": {
         "type": "prometheus",
         "uid": "gaas-mimir"
