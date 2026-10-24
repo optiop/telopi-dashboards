@@ -275,3 +275,9 @@ python3 scripts/check_integrations.py \
 
 [CI](.github/workflows/check.yml) runs all of them on every pull request and on
 `main`.
+
+## Licence
+
+[Apache-2.0](LICENSE), the licence of the mixins much of it is forked from.
+Content forked from elsewhere keeps its own licence and says so: an
+integration's README names its source and licence under *Source and licence*.
