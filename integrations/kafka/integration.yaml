@@ -17,6 +17,12 @@ settings:
   - name: KAFKA_ADDRESS
     description: Where one of the cluster's brokers listens, host and port.
     example: localhost:9092
+  - name: KAFKA_TOPICS
+    description: Which topics to read, as a regular expression; .* for all. Kafka's internal topics are never read.
+    example: .*
+  - name: KAFKA_GROUPS
+    description: Which consumer groups to read, as a regular expression; .* for all.
+    example: .*
   - name: ENVIRONMENT
     description: The name of the environment this Kafka belongs to, as you call it in Telopi, such as production.
     example: production

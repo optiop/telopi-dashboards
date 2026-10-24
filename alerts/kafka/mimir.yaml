@@ -10,7 +10,7 @@ thresholds:
     description: How long a cluster that was sending may send nothing before it alerts.
   consumer_lag:
     default: 1000
-    description: How many messages a consumer group may be behind on a topic, for 15 minutes, before it alerts.
+    description: How many messages a consumer group may be behind on a topic, for 30 minutes without catching up, before it alerts.
 groups:
   - name: kafka
     interval: 1m
@@ -41,10 +41,12 @@ groups:
           summary: "Kafka topic {{ $labels.topic }} has {{ $value }} under-replicated partitions{{ with $labels.cluster }} in the {{ . }} environment{{ end }}"
           description: "For 5 minutes some partitions of {{ $labels.topic }} have had fewer in-sync replicas than replicas, so one more broker failure can lose data or stop writes. Look for a broker that is down or overloaded."
       - alert: KafkaConsumerLagHigh
-        expr: sum by (cluster, instance, consumergroup, topic) (kafka_consumergroup_uncommitted_offsets{topic!="__consumer_offsets"} or kafka_consumergroup_lag{topic!="__consumer_offsets"}) > ${consumer_lag}
-        for: 15m
+      # Behind by more than the threshold for all of the last 30 minutes, and
+      # not catching up: a backlog that drains on its own does not alert.
+        expr: (sum by (cluster, instance, consumergroup, topic) (min_over_time(kafka_consumergroup_uncommitted_offsets_sum[30m]) or min_over_time(kafka_consumergroup_lag_sum[30m])) > ${consumer_lag}) and on (cluster, instance, consumergroup, topic) (sum by (cluster, instance, consumergroup, topic) (delta(kafka_consumergroup_uncommitted_offsets_sum[30m]) or delta(kafka_consumergroup_lag_sum[30m])) >= 0)
+        for: 5m
         labels:
           severity: warning
         annotations:
           summary: "Kafka consumer group {{ $labels.consumergroup }} is {{ $value | printf \"%.0f\" }} messages behind on {{ $labels.topic }}{{ with $labels.cluster }} in the {{ . }} environment{{ end }}"
-          description: "The group has been over ${consumer_lag} messages behind for 15 minutes: its consumers are too slow, stuck or gone."
+          description: "The group has been over ${consumer_lag} messages behind for at least 30 minutes and is not catching up: its consumers are too slow, stuck or gone."

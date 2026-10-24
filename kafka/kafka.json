@@ -467,7 +467,7 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "sum((kafka_consumergroup_uncommitted_offsets{cluster=~\"$environment\", instance=~\"$instance\", topic!=\"__consumer_offsets\"} or kafka_consumergroup_lag{cluster=~\"$environment\", instance=~\"$instance\", topic!=\"__consumer_offsets\"}))",
+          "expr": "sum((kafka_consumergroup_uncommitted_offsets_sum{cluster=~\"$environment\", instance=~\"$instance\"} or kafka_consumergroup_lag_sum{cluster=~\"$environment\", instance=~\"$instance\"}))",
           "refId": "A",
           "instant": false,
           "range": true,
@@ -611,7 +611,7 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "sum by (cluster, instance, consumergroup, topic) (rate(kafka_consumergroup_current_offset{cluster=~\"$environment\", instance=~\"$instance\", topic!=\"__consumer_offsets\"}[$__rate_interval]))",
+          "expr": "sum by (cluster, instance, consumergroup, topic) (rate(kafka_consumergroup_current_offset_sum{cluster=~\"$environment\", instance=~\"$instance\"}[$__rate_interval]))",
           "refId": "A",
           "instant": false,
           "range": true,
@@ -690,7 +690,7 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "sum by (cluster, instance, consumergroup, topic) (kafka_consumergroup_uncommitted_offsets{cluster=~\"$environment\", instance=~\"$instance\", topic!=\"__consumer_offsets\"} or kafka_consumergroup_lag{cluster=~\"$environment\", instance=~\"$instance\", topic!=\"__consumer_offsets\"})",
+          "expr": "sum by (cluster, instance, consumergroup, topic) (kafka_consumergroup_uncommitted_offsets_sum{cluster=~\"$environment\", instance=~\"$instance\"} or kafka_consumergroup_lag_sum{cluster=~\"$environment\", instance=~\"$instance\"})",
           "refId": "A",
           "instant": false,
           "range": true,
