@@ -39,6 +39,7 @@ data-plane release. Until then, a change here must also be made there.
 | [`mysql/`](mysql) | MySQL: servers up, connections, queries per second, the busiest statements, slow queries, the InnoDB buffer pool, rows and traffic | always, and it fills once Alloy's mysql exporter sends (the MySQL integration) |
 | [`kafka/`](kafka) | Kafka: brokers, topics and partitions, messages in by topic and consumed by group, consumer group lag and members, replication | always, and it fills once Alloy's kafka exporter sends (the Kafka integration) |
 | [`rabbitmq/`](rabbitmq) | RabbitMQ: nodes up, messages per second and in queues, unroutable and dead-lettered messages, connections, alarms, memory, disk and file descriptors | always, and it fills once RabbitMQ's Prometheus plugin sends (the RabbitMQ integration) |
+| [`jvm/`](jvm) | JVM: processes up, heap against its maximum, memory pools, time in GC and collections, threads and CPU | always, and it fills once a Java process sends the Prometheus JMX exporter's metrics (the JVM integration) |
 
 An **environment** is a Kubernetes cluster, or any machines, that send to the
 customer's one Grafana under one name: the `cluster` label Alloy sets, which is
@@ -104,6 +105,7 @@ browser telemetry).
 | [`mysql/`](alerts/mysql/mimir.yaml) | A server down; its connections nearly used up; a replica stopped or falling behind |
 | [`kafka/`](alerts/kafka/mimir.yaml) | A cluster that stopped sending; a broker that left; under-replicated partitions; a consumer group far behind |
 | [`rabbitmq/`](alerts/rabbitmq/mimir.yaml) | A node down; publishers blocked by a memory or disk alarm; memory or file descriptors nearly used up |
+| [`jvm/`](alerts/jvm/mimir.yaml) | A process down; its heap nearly full; much time in GC; deadlocked threads |
 
 Not connected yet: the platform's reconciler, which writes each set into each
 customer's rulers every five minutes, in a namespace of its own (`telopi`),

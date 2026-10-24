@@ -1,0 +1,56 @@
+// JVM: heap and other memory, garbage collection, threads and CPU of one
+// Java (or Kotlin, Scala, ...) process, from the Prometheus JMX exporter
+// running in it as a Java agent, scraped by Alloy and sent to your Telopi
+// stack every minute. Your ingest key's password is read from the
+// environment variable TELOPI_PASSWORD.
+
+// A target on this machine (localhost) is named after the machine and its
+// port, so machines of one environment stay apart.
+discovery.relabel "jvm" {
+  targets = [{
+    __address__ = "${JVM_ADDRESS}",
+  }]
+
+  rule {
+    source_labels = ["__address__"]
+    regex         = "(?:localhost|127\\.0\\.0\\.1|\\[::1\\])(:[0-9]+)"
+    target_label  = "instance"
+    replacement   = constants.hostname + "$1"
+  }
+}
+
+prometheus.scrape "jvm" {
+  targets         = discovery.relabel.jvm.output
+  // The job the JVM dashboard and alerts read the process's up from.
+  job_name        = "integrations/jvm"
+  scrape_interval = "60s"
+  forward_to      = [prometheus.relabel.jvm.receiver]
+}
+
+// Only what the dashboard, its alerts and the tile's check read:
+// the agent also turns MBeans into metrics, and any it sends are dropped here.
+prometheus.relabel "jvm" {
+  forward_to = [prometheus.remote_write.jvm.receiver]
+
+  rule {
+    source_labels = ["__name__"]
+    regex         = "jmx_exporter_build_info|jvm_gc_collection_seconds_count|jvm_gc_collection_seconds_sum|jvm_memory_committed_bytes|jvm_memory_max_bytes|jvm_memory_pool_used_bytes|jvm_memory_used_bytes|jvm_threads_current|jvm_threads_daemon|jvm_threads_deadlocked|jvm_threads_state|process_cpu_seconds_total|up"
+    action        = "keep"
+  }
+}
+
+prometheus.remote_write "jvm" {
+  // The environment's name: the JVM dashboard and its alerts group by it.
+  external_labels = {
+    cluster = "${ENVIRONMENT}",
+  }
+
+  endpoint {
+    url = "${INGEST_URL}/mimir/api/v1/push"
+
+    basic_auth {
+      username = "${USERNAME}"
+      password = sys.env("TELOPI_PASSWORD")
+    }
+  }
+}
