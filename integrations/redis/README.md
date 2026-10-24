@@ -11,9 +11,10 @@ and a few other read-only commands once a minute: whether Redis answers
 (`redis_up`), memory used against `maxmemory`, connected and blocked
 clients, rejected connections, commands per second by command and their
 time, key hits and misses, evicted and expired keys, keys per database,
-network traffic and replication. Each instance is its own `instance`, named
-after its address, and carries its environment's name in the `cluster`
-label. Valkey answers the same way.
+network traffic and replication. Each instance is its own `instance`: one
+on the same machine as Alloy (`localhost`) is named after the machine and
+its port, any other after its address. Each carries its environment's name
+in the `cluster` label. Valkey answers the same way.
 
 The **Redis** dashboard shows the instances up, clients, memory, commands
 per second, the hit ratio, the busiest and slowest commands, evictions and
@@ -35,7 +36,7 @@ keys.
 
 Add the snippet to Alloy's configuration (`/etc/alloy/config.alloy`) and
 restart Alloy. Redis shows on the dashboard within two minutes. For another
-instance, copy the three blocks with a new label (`redis_cache`, say).
+instance, copy the four blocks with a new label (`redis_cache`, say).
 
 ## Alerts
 

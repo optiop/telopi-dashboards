@@ -8,8 +8,21 @@ prometheus.exporter.redis "redis" {
   redis_password = sys.env("REDIS_PASSWORD")
 }
 
+// A target on this machine (localhost) is named after the machine and its
+// port, so machines of one environment stay apart.
+discovery.relabel "redis" {
+  targets = prometheus.exporter.redis.redis.targets
+
+  rule {
+    source_labels = ["instance"]
+    regex         = "(?:[a-z]+://|tcp\\()?(?:localhost|127\\.0\\.0\\.1|\\[::1\\])(:[0-9]+)?.*"
+    target_label  = "instance"
+    replacement   = constants.hostname + "$1"
+  }
+}
+
 prometheus.scrape "redis" {
-  targets         = prometheus.exporter.redis.redis.targets
+  targets         = discovery.relabel.redis.output
   scrape_interval = "60s"
   forward_to      = [prometheus.remote_write.redis.receiver]
 }
