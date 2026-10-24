@@ -1,0 +1,61 @@
+// Kafka: brokers, topics, partitions, replication and consumer group lag of
+// one Kafka cluster, through Alloy's built-in kafka exporter, sent to your
+// Telopi stack every minute. Your ingest key's password is read from the
+// environment variable TELOPI_PASSWORD.
+
+prometheus.exporter.kafka "kafka" {
+  // Any broker of the cluster; the exporter finds the others.
+  kafka_uris = ["${KAFKA_ADDRESS}"]
+  // Which topics and consumer groups to read, as regular expressions.
+  // Kafka's internal topics (__consumer_offsets and the like) never.
+  topics_filter_regex  = "${KAFKA_TOPICS}"
+  topics_exclude_regex = "__.*"
+  groups_filter_regex  = "${KAFKA_GROUPS}"
+}
+
+// A broker on this machine (localhost) is named after the machine and its
+// port, so clusters of one environment stay apart.
+discovery.relabel "kafka" {
+  targets = prometheus.exporter.kafka.kafka.targets
+
+  rule {
+    source_labels = ["instance"]
+    regex         = "(?:localhost|127\\.0\\.0\\.1|\\[::1\\])(:[0-9]+)?.*"
+    target_label  = "instance"
+    replacement   = constants.hostname + "$1"
+  }
+}
+
+prometheus.scrape "kafka" {
+  targets         = discovery.relabel.kafka.output
+  scrape_interval = "60s"
+  forward_to      = [prometheus.relabel.kafka.receiver]
+}
+
+// Per-partition series nothing reads: leaders, oldest offsets, and each
+// group's offsets and lag per partition (the per-topic sums are kept).
+prometheus.relabel "kafka" {
+  forward_to = [prometheus.remote_write.kafka.receiver]
+
+  rule {
+    source_labels = ["__name__"]
+    regex         = "kafka_topic_partition_(leader|leader_is_preferred|oldest_offset)|kafka_consumergroup_(current_offset|uncommitted_offsets|lag)"
+    action        = "drop"
+  }
+}
+
+prometheus.remote_write "kafka" {
+  // The environment's name: the Kafka dashboard and its alerts group by it.
+  external_labels = {
+    cluster = "${ENVIRONMENT}",
+  }
+
+  endpoint {
+    url = "${INGEST_URL}/mimir/api/v1/push"
+
+    basic_auth {
+      username = "${USERNAME}"
+      password = sys.env("TELOPI_PASSWORD")
+    }
+  }
+}

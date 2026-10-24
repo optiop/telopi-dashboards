@@ -37,6 +37,7 @@ data-plane release. Until then, a change here must also be made there.
 | [`redis/`](redis) | Redis: instances up, clients, memory against `maxmemory`, commands per second, hit ratio, the busiest and slowest commands, evictions and keys | always, and it fills once Alloy's redis exporter sends (the Redis integration) |
 | [`nginx/`](nginx) | Nginx: servers up, requests per second and per connection, connections by state, dropped connections | always, and it fills once the NGINX Prometheus exporter sends (the Nginx integration) |
 | [`mysql/`](mysql) | MySQL: servers up, connections, queries per second, the busiest statements, slow queries, the InnoDB buffer pool, rows and traffic | always, and it fills once Alloy's mysql exporter sends (the MySQL integration) |
+| [`kafka/`](kafka) | Kafka: brokers, topics and partitions, messages in by topic and consumed by group, consumer group lag and members, replication | always, and it fills once Alloy's kafka exporter sends (the Kafka integration) |
 
 An **environment** is a Kubernetes cluster, or any machines, that send to the
 customer's one Grafana under one name: the `cluster` label Alloy sets, which is
@@ -100,6 +101,7 @@ browser telemetry).
 | [`redis/`](alerts/redis/mimir.yaml) | An instance down; its memory nearly full; connections refused; a replica that lost its primary |
 | [`nginx/`](alerts/nginx/mimir.yaml) | A server down; dropping connections |
 | [`mysql/`](alerts/mysql/mimir.yaml) | A server down; its connections nearly used up; a replica stopped or falling behind |
+| [`kafka/`](alerts/kafka/mimir.yaml) | A cluster that stopped sending; a broker that left; under-replicated partitions; a consumer group far behind |
 
 Not connected yet: the platform's reconciler, which writes each set into each
 customer's rulers every five minutes, in a namespace of its own (`telopi`),
