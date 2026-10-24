@@ -1,0 +1,49 @@
+# Redis: an instance that is down, nearly out of memory, refusing clients, or
+# a replica that lost its primary. Mimir evaluates them every minute over what
+# Alloy's redis exporter sends, one series set per instance, the same metrics
+# as the Redis dashboard (redis/). Adapted from grafana/jsonnet-libs'
+# redis-mixin (Apache-2.0).
+thresholds:
+  down_for:
+    default: 2m
+    description: How long the exporter may fail to reach Redis before it alerts.
+  memory_percent:
+    default: 90
+    description: How much of maxmemory may be in use, in percent, for 10 minutes before it alerts.
+groups:
+  - name: redis
+    interval: 1m
+    rules:
+      - alert: RedisDown
+        expr: max by (cluster, instance) (redis_up) == 0
+        for: ${down_for}
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis {{ $labels.instance }} is down{{ with $labels.cluster }} in the {{ . }} environment{{ end }}"
+          description: "Alloy has not been able to reach {{ $labels.instance }} for ${down_for}: Redis is down, refuses the password, or cannot be reached."
+      # Only where maxmemory is set: without it Redis grows until the machine runs out.
+      - alert: RedisMemoryNearlyFull
+        expr: 100 * max by (cluster, instance) (redis_memory_used_bytes) / max by (cluster, instance) (redis_memory_max_bytes > 0) > ${memory_percent}
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis {{ $labels.instance }} uses {{ $value | printf \"%.0f\" }}% of its maxmemory{{ with $labels.cluster }} in the {{ . }} environment{{ end }}"
+          description: "Over ${memory_percent}% of maxmemory has been in use for 10 minutes. When it is full Redis evicts keys or, with noeviction, refuses writes."
+      - alert: RedisRejectingConnections
+        expr: sum by (cluster, instance) (increase(redis_rejected_connections_total[5m])) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis {{ $labels.instance }} refused {{ $value | printf \"%.0f\" }} connections in 5 minutes{{ with $labels.cluster }} in the {{ . }} environment{{ end }}"
+          description: "Redis refuses new connections when maxclients is reached. Look for clients that leak connections, or raise maxclients."
+      - alert: RedisReplicaLinkDown
+        expr: max by (cluster, instance) (redis_master_link_up) == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis replica {{ $labels.instance }} lost its primary{{ with $labels.cluster }} in the {{ . }} environment{{ end }}"
+          description: "The replica has not been connected to its primary for 5 minutes, so it serves data that grows stale."
