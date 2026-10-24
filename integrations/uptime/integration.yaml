@@ -1,0 +1,15 @@
+# Uptime: Telopi checks the customer's websites from its own cluster, so
+# there is nothing to install.
+id: uptime
+name: Uptime
+category: website
+description: Telopi checks your websites every minute, and alerts when one is down or its certificate is about to expire.
+signals: [metrics]
+check:
+  datasource: mimir
+  query: group(max_over_time(probe_success[1h]))
+install: telopi
+dashboards:
+  - uid: gaas-uptime
+    title: Uptime
+alerts: alerts/uptime/mimir.yaml

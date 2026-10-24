@@ -1,4 +1,9 @@
 # Every integration, each a folder here, in the order the platform reads
 # them (the portal sorts its tiles by category and name). CI checks it names
 # each folder once.
+- uptime
+- website
+- traces
+- logs
 - machines
+- kubernetes

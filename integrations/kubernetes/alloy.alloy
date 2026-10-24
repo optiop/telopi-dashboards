@@ -1,0 +1,132 @@
+// Kubernetes: kube-state-metrics, and each node's kubelet and cAdvisor, from
+// an Alloy that runs in the cluster, sent to your Telopi stack every minute.
+// Alloy reaches the kubelets through the Kubernetes API, so its service
+// account may get nodes/proxy and nodes/metrics. The password is your ingest
+// key's, read from the environment variable TELOPI_PASSWORD.
+
+// kube-state-metrics: pods, workloads, jobs, nodes and their requests.
+discovery.kubernetes "kubernetes_state" {
+  role = "endpoints"
+
+  selectors {
+    role  = "endpoints"
+    label = "app.kubernetes.io/name=kube-state-metrics"
+  }
+}
+
+discovery.relabel "kubernetes_state" {
+  targets = discovery.kubernetes.kubernetes_state.targets
+
+  rule {
+    source_labels = ["__meta_kubernetes_endpoint_port_name"]
+    regex         = "http"
+    action        = "keep"
+  }
+}
+
+prometheus.scrape "kubernetes_state" {
+  targets         = discovery.relabel.kubernetes_state.output
+  job_name        = "kube-state-metrics"
+  scrape_interval = "60s"
+  forward_to      = [prometheus.remote_write.kubernetes.receiver]
+}
+
+// Each node's kubelet (volumes) and cAdvisor (containers' CPU, memory and
+// network), through the API server's proxy.
+discovery.kubernetes "kubernetes_nodes" {
+  role = "node"
+}
+
+discovery.relabel "kubernetes_kubelet" {
+  targets = discovery.kubernetes.kubernetes_nodes.targets
+
+  rule {
+    target_label = "__address__"
+    replacement  = "kubernetes.default.svc:443"
+  }
+
+  rule {
+    source_labels = ["__meta_kubernetes_node_name"]
+    target_label  = "__metrics_path__"
+    replacement   = "/api/v1/nodes/$1/proxy/metrics"
+  }
+
+  rule {
+    source_labels = ["__meta_kubernetes_node_name"]
+    target_label  = "node"
+  }
+}
+
+discovery.relabel "kubernetes_cadvisor" {
+  targets = discovery.relabel.kubernetes_kubelet.output
+
+  rule {
+    source_labels = ["node"]
+    target_label  = "__metrics_path__"
+    replacement   = "/api/v1/nodes/$1/proxy/metrics/cadvisor"
+  }
+}
+
+prometheus.scrape "kubernetes_kubelet" {
+  targets           = discovery.relabel.kubernetes_kubelet.output
+  job_name          = "kubelet"
+  scheme            = "https"
+  scrape_interval   = "60s"
+  bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+  forward_to        = [prometheus.relabel.kubernetes_kubelet.receiver]
+
+  tls_config {
+    ca_file = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+  }
+}
+
+// Of the kubelet's own metrics, the dashboards read only the volumes'.
+prometheus.relabel "kubernetes_kubelet" {
+  forward_to = [prometheus.remote_write.kubernetes.receiver]
+
+  rule {
+    source_labels = ["__name__"]
+    regex         = "kubelet_volume_stats_.*"
+    action        = "keep"
+  }
+}
+
+prometheus.scrape "kubernetes_cadvisor" {
+  targets           = discovery.relabel.kubernetes_cadvisor.output
+  job_name          = "cadvisor"
+  scheme            = "https"
+  scrape_interval   = "60s"
+  bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+  forward_to        = [prometheus.relabel.kubernetes_cadvisor.receiver]
+
+  tls_config {
+    ca_file = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+  }
+}
+
+// Of cAdvisor's, the containers' CPU, throttling, memory and network.
+prometheus.relabel "kubernetes_cadvisor" {
+  forward_to = [prometheus.remote_write.kubernetes.receiver]
+
+  rule {
+    source_labels = ["__name__"]
+    regex         = "container_cpu_usage_seconds_total|container_cpu_cfs_periods_total|container_cpu_cfs_throttled_periods_total|container_memory_working_set_bytes|container_network_receive_bytes_total|container_network_transmit_bytes_total"
+    action        = "keep"
+  }
+}
+
+prometheus.remote_write "kubernetes" {
+  // The environment's name: the Kubernetes dashboards and alerts group by it.
+  external_labels = {
+    cluster = "${ENVIRONMENT}",
+  }
+
+  endpoint {
+    url = "${INGEST_URL}/mimir/api/v1/push"
+
+    basic_auth {
+      username = "${USERNAME}"
+      password = sys.env("TELOPI_PASSWORD")
+    }
+  }
+}

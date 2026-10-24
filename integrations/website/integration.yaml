@@ -1,0 +1,15 @@
+# Website: browser telemetry (Faro) from each visitor's browser, which Telopi
+# turns on for the customer's sites; the snippet goes into their pages.
+id: website
+name: Website
+category: website
+description: Page loads, Core Web Vitals, JavaScript errors and sessions, from your visitors' browsers.
+signals: [logs]
+check:
+  datasource: loki
+  query: sum(count_over_time({source="faro"}[1h]))
+install: telopi
+dashboards:
+  - uid: gaas-website
+    title: Website
+alerts: alerts/website/loki.yaml
