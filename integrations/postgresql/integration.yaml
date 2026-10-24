@@ -1,0 +1,22 @@
+# PostgreSQL: any PostgreSQL server Alloy can connect to, through Alloy's
+# built-in postgres exporter. The README says what each part means.
+id: postgresql
+name: PostgreSQL
+category: database
+description: Connections, transactions, cache hit ratio, locks, deadlocks and size of each PostgreSQL database, with alerts for one that is down or full.
+signals: [metrics]
+check:
+  datasource: mimir
+  query: group(max_over_time(pg_up[1h]))
+install: alloy
+dashboards:
+  - uid: telopi-postgresql
+    title: PostgreSQL
+alerts: alerts/postgresql/mimir.yaml
+settings:
+  - name: ENVIRONMENT
+    description: The name of the environment this PostgreSQL belongs to, as you call it in Telopi, such as production.
+    example: production
+env:
+  - name: POSTGRES_DSN
+    description: "The connection string of a monitoring user, with its password: postgresql://telopi:PASSWORD@localhost:5432/postgres?sslmode=disable"

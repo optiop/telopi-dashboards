@@ -1,0 +1,1282 @@
+{
+  "uid": "telopi-postgresql",
+  "title": "PostgreSQL",
+  "description": "Connections, transactions, cache hits, locks and size of each PostgreSQL server that Alloy's postgres exporter reads, in each environment.",
+  "tags": [
+    "telopi",
+    "postgresql"
+  ],
+  "timezone": "browser",
+  "editable": true,
+  "graphTooltip": 1,
+  "schemaVersion": 41,
+  "version": 1,
+  "refresh": "1m",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "links": [
+    {
+      "type": "dashboards",
+      "tags": [
+        "telopi"
+      ],
+      "asDropdown": true,
+      "title": "Telopi dashboards",
+      "includeVars": false,
+      "keepTime": true,
+      "targetBlank": false,
+      "icon": "external link",
+      "tooltip": "",
+      "url": ""
+    }
+  ],
+  "annotations": {
+    "list": []
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "environment",
+        "label": "Environment",
+        "description": "An environment is a Kubernetes cluster, or any machines, that send to this Grafana under one name: the cluster label Alloy sets. Series without one show under All.",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "gaas-mimir"
+        },
+        "query": {
+          "query": "label_values(pg_up, cluster)",
+          "refId": "environment",
+          "qryType": 1
+        },
+        "definition": "label_values(pg_up, cluster)",
+        "refresh": 2,
+        "sort": 1,
+        "regex": "",
+        "multi": true,
+        "includeAll": true,
+        "hide": 0,
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "allValue": ".*"
+      },
+      {
+        "name": "instance",
+        "label": "Server",
+        "description": "",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "gaas-mimir"
+        },
+        "query": {
+          "query": "label_values(pg_up{cluster=~\"$environment\"}, instance)",
+          "refId": "instance",
+          "qryType": 1
+        },
+        "definition": "label_values(pg_up{cluster=~\"$environment\"}, instance)",
+        "refresh": 2,
+        "sort": 1,
+        "regex": "",
+        "multi": true,
+        "includeAll": true,
+        "hide": 0,
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "allValue": ".+"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Overview",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "panels": []
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Servers up",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 1
+      },
+      "description": "Servers the exporter could query at the last scrape.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "count(max by (cluster, instance) (pg_up{cluster=~\"$environment\", instance=~\"$instance\"}) == 1)",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "interval": "1m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#4e80ee",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "0",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Servers down",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 1
+      },
+      "description": "Servers the exporter could not query at the last scrape.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "count(max by (cluster, instance) (pg_up{cluster=~\"$environment\", instance=~\"$instance\"}) == 0)",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "interval": "1m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#22c55e",
+                "value": null
+              },
+              {
+                "color": "#f87171",
+                "value": 1
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "0",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Connections",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 1
+      },
+      "description": "Open connections to the selected servers, in any state.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "sum(pg_stat_activity_count{cluster=~\"$environment\", instance=~\"$instance\"})",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "interval": "1m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#4e80ee",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "0",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Most connections used",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 1
+      },
+      "description": "The highest share of max_connections in use on any selected server.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "max(100 * sum by (cluster, instance) (pg_stat_activity_count{cluster=~\"$environment\", instance=~\"$instance\"}) / max by (cluster, instance) (pg_settings_max_connections{cluster=~\"$environment\", instance=~\"$instance\"}))",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "interval": "1m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#22c55e",
+                "value": null
+              },
+              {
+                "color": "#fb923c",
+                "value": 70
+              },
+              {
+                "color": "#f87171",
+                "value": 90
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "0",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Transactions",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 1
+      },
+      "description": "Committed and rolled back transactions per second, all selected databases.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "sum(rate(pg_stat_database_xact_commit{cluster=~\"$environment\", instance=~\"$instance\"}[$__rate_interval]) + rate(pg_stat_database_xact_rollback{cluster=~\"$environment\", instance=~\"$instance\"}[$__rate_interval]))",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "interval": "1m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "tps",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#4e80ee",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Size",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 1
+      },
+      "description": "The size on disk of every database of the selected servers.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "sum(pg_database_size_bytes{cluster=~\"$environment\", instance=~\"$instance\"})",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "interval": "1m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#4e80ee",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 8,
+      "type": "row",
+      "title": "Connections",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "panels": []
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Connections by state",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 6
+      },
+      "description": "Open connections per server, by what they are doing. Many idle in transaction ones hold locks and block vacuum.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "sum by (cluster, instance, state) (pg_stat_activity_count{cluster=~\"$environment\", instance=~\"$instance\", state!~\"disabled|fastpath function call\"})",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "interval": "1m",
+          "legendFormat": "{{instance}} {{state}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": true,
+            "axisSoftMin": 0,
+            "lineInterpolation": "smooth"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Connections used",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 6
+      },
+      "description": "Share of max_connections in use per server. At 100% new connections are refused.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "100 * sum by (cluster, instance) (pg_stat_activity_count{cluster=~\"$environment\", instance=~\"$instance\"}) / max by (cluster, instance) (pg_settings_max_connections{cluster=~\"$environment\", instance=~\"$instance\"})",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "interval": "1m",
+          "legendFormat": "{{instance}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": true,
+            "axisSoftMin": 0,
+            "lineInterpolation": "smooth"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 11,
+      "type": "row",
+      "title": "Activity",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 14
+      },
+      "panels": []
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Transactions",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 15
+      },
+      "description": "Committed and rolled back transactions per second, per server.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "sum by (cluster, instance) (rate(pg_stat_database_xact_commit{cluster=~\"$environment\", instance=~\"$instance\"}[$__rate_interval]))",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "interval": "1m",
+          "legendFormat": "{{instance}} commits"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "sum by (cluster, instance) (rate(pg_stat_database_xact_rollback{cluster=~\"$environment\", instance=~\"$instance\"}[$__rate_interval]))",
+          "refId": "B",
+          "instant": false,
+          "range": true,
+          "interval": "1m",
+          "legendFormat": "{{instance}} rollbacks"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "tps",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": true,
+            "axisSoftMin": 0,
+            "lineInterpolation": "smooth"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Rows",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 15
+      },
+      "description": "Rows read and written per second, per server.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "sum by (cluster, instance) (rate(pg_stat_database_tup_fetched{cluster=~\"$environment\", instance=~\"$instance\"}[$__rate_interval]))",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "interval": "1m",
+          "legendFormat": "{{instance}} fetched"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "sum by (cluster, instance) (rate(pg_stat_database_tup_inserted{cluster=~\"$environment\", instance=~\"$instance\"}[$__rate_interval]))",
+          "refId": "B",
+          "instant": false,
+          "range": true,
+          "interval": "1m",
+          "legendFormat": "{{instance}} inserted"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "sum by (cluster, instance) (rate(pg_stat_database_tup_updated{cluster=~\"$environment\", instance=~\"$instance\"}[$__rate_interval]))",
+          "refId": "C",
+          "instant": false,
+          "range": true,
+          "interval": "1m",
+          "legendFormat": "{{instance}} updated"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "sum by (cluster, instance) (rate(pg_stat_database_tup_deleted{cluster=~\"$environment\", instance=~\"$instance\"}[$__rate_interval]))",
+          "refId": "D",
+          "instant": false,
+          "range": true,
+          "interval": "1m",
+          "legendFormat": "{{instance}} deleted"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "rowsps",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": true,
+            "axisSoftMin": 0,
+            "lineInterpolation": "smooth"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "Cache hit ratio",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 23
+      },
+      "description": "Share of block reads served from shared buffers, per database. Under about 99% on a busy database, shared_buffers or memory may be too small.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "sum by (cluster, instance, datname) (rate(pg_stat_database_blks_hit{cluster=~\"$environment\", instance=~\"$instance\"}[$__rate_interval])) / (sum by (cluster, instance, datname) (rate(pg_stat_database_blks_hit{cluster=~\"$environment\", instance=~\"$instance\"}[$__rate_interval])) + sum by (cluster, instance, datname) (rate(pg_stat_database_blks_read{cluster=~\"$environment\", instance=~\"$instance\"}[$__rate_interval])))",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "interval": "1m",
+          "legendFormat": "{{instance}} {{datname}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": true,
+            "axisSoftMin": 0,
+            "lineInterpolation": "smooth"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0,
+          "max": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 15,
+      "type": "timeseries",
+      "title": "Deadlocks and conflicts",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 23
+      },
+      "description": "Deadlocks, and queries cancelled by a conflict with recovery on a replica, per database.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "sum by (cluster, instance, datname) (increase(pg_stat_database_deadlocks{cluster=~\"$environment\", instance=~\"$instance\"}[$__rate_interval]))",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "interval": "1m",
+          "legendFormat": "{{instance}} {{datname}} deadlocks"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "sum by (cluster, instance, datname) (increase(pg_stat_database_conflicts{cluster=~\"$environment\", instance=~\"$instance\"}[$__rate_interval]))",
+          "refId": "B",
+          "instant": false,
+          "range": true,
+          "interval": "1m",
+          "legendFormat": "{{instance}} {{datname}} conflicts"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": true,
+            "axisSoftMin": 0,
+            "lineInterpolation": "smooth"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 16,
+      "type": "row",
+      "title": "Locks and storage",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 31
+      },
+      "panels": []
+    },
+    {
+      "id": 17,
+      "type": "timeseries",
+      "title": "Locks by mode",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 32
+      },
+      "description": "Locks held per server, by lock mode.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "sum by (cluster, instance, mode) (pg_locks_count{cluster=~\"$environment\", instance=~\"$instance\"})",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "interval": "1m",
+          "legendFormat": "{{instance}} {{mode}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": true,
+            "axisSoftMin": 0,
+            "lineInterpolation": "smooth"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 18,
+      "type": "timeseries",
+      "title": "Longest transaction",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 32
+      },
+      "description": "How long the oldest open transaction of each database has been running. A long one holds back vacuum.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "max by (cluster, instance, datname) (pg_stat_activity_max_tx_duration{cluster=~\"$environment\", instance=~\"$instance\"})",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "interval": "1m",
+          "legendFormat": "{{instance}} {{datname}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": true,
+            "axisSoftMin": 0,
+            "lineInterpolation": "smooth"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 19,
+      "type": "timeseries",
+      "title": "Database size",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 40
+      },
+      "description": "The size on disk of each database.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "sum by (cluster, instance, datname) (pg_database_size_bytes{cluster=~\"$environment\", instance=~\"$instance\"})",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "interval": "1m",
+          "legendFormat": "{{instance}} {{datname}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": true,
+            "axisSoftMin": 0,
+            "lineInterpolation": "smooth"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 20,
+      "type": "timeseries",
+      "title": "Temporary files written",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 40
+      },
+      "description": "Bytes per second that queries spill to temporary files, per database: sorts and hashes larger than work_mem.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "sum by (cluster, instance, datname) (rate(pg_stat_database_temp_bytes{cluster=~\"$environment\", instance=~\"$instance\"}[$__rate_interval]))",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "interval": "1m",
+          "legendFormat": "{{instance}} {{datname}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": true,
+            "axisSoftMin": 0,
+            "lineInterpolation": "smooth"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    }
+  ]
+}

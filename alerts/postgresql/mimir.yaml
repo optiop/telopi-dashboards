@@ -1,0 +1,54 @@
+# PostgreSQL: a server that is down, short of connections, deadlocking, or a
+# replica falling behind. Mimir evaluates them every minute over what Alloy's
+# postgres exporter sends, one series set per server (instance), the same
+# metrics as the PostgreSQL dashboard (postgresql/). Adapted from
+# prometheus-community/postgres_exporter's postgres_mixin (Apache-2.0).
+thresholds:
+  down_for:
+    default: 2m
+    description: How long the exporter may fail to query a server before it alerts.
+  connections_percent:
+    default: 80
+    description: How much of max_connections may be in use, in percent, for 10 minutes before it alerts.
+  deadlocks_per_minute:
+    default: 5
+    description: How many deadlocks a minute a database may have, on average over 5 minutes, before it alerts.
+  replication_lag_seconds:
+    default: 3600
+    description: How far behind its primary a replica may be, in seconds, before it alerts.
+groups:
+  - name: postgresql
+    interval: 1m
+    rules:
+      - alert: PostgreSQLDown
+        expr: max by (cluster, instance) (pg_up) == 0
+        for: ${down_for}
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL {{ $labels.instance }} is down{{ with $labels.cluster }} in the {{ . }} environment{{ end }}"
+          description: "Alloy has not been able to query {{ $labels.instance }} for ${down_for}: the server is down, refuses the monitoring user, or cannot be reached."
+      - alert: PostgreSQLConnectionsNearlyUsed
+        expr: 100 * sum by (cluster, instance) (pg_stat_activity_count) / (max by (cluster, instance) (pg_settings_max_connections) - max by (cluster, instance) (pg_settings_superuser_reserved_connections)) > ${connections_percent}
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL {{ $labels.instance }} uses {{ $value | printf \"%.0f\" }}% of its connections{{ with $labels.cluster }} in the {{ . }} environment{{ end }}"
+          description: "Over ${connections_percent}% of max_connections (less those reserved for superusers) have been in use for 10 minutes. At 100% new connections are refused: look for idle connections or a missing pool, or raise max_connections."
+      - alert: PostgreSQLDeadlocks
+        expr: sum by (cluster, instance, datname) (rate(pg_stat_database_deadlocks[5m])) * 60 > ${deadlocks_per_minute}
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL database {{ $labels.datname }} on {{ $labels.instance }} has {{ $value | printf \"%.0f\" }} deadlocks a minute{{ with $labels.cluster }} in the {{ . }} environment{{ end }}"
+          description: "Over ${deadlocks_per_minute} deadlocks a minute for 5 minutes: transactions take the same locks in different orders, and one of each pair is rolled back."
+      - alert: PostgreSQLReplicationLagging
+        expr: max by (cluster, instance) (pg_replication_lag_seconds) > ${replication_lag_seconds} and on (cluster, instance) max by (cluster, instance) (pg_replication_is_replica) == 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL replica {{ $labels.instance }} is {{ $value | humanizeDuration }} behind{{ with $labels.cluster }} in the {{ . }} environment{{ end }}"
+          description: "The replica has replayed nothing newer than ${replication_lag_seconds} seconds ago for 5 minutes. On a primary with no writes this is expected; otherwise check the replica's network and disk."
