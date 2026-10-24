@@ -36,6 +36,7 @@ data-plane release. Until then, a change here must also be made there.
 | [`postgresql/`](postgresql) | PostgreSQL: servers up, connections against `max_connections`, transactions, rows, cache hit ratio, deadlocks, locks, the longest transaction and each database's size | always, and it fills once Alloy's postgres exporter sends (the PostgreSQL integration) |
 | [`redis/`](redis) | Redis: instances up, clients, memory against `maxmemory`, commands per second, hit ratio, the busiest and slowest commands, evictions and keys | always, and it fills once Alloy's redis exporter sends (the Redis integration) |
 | [`nginx/`](nginx) | Nginx: servers up, requests per second and per connection, connections by state, dropped connections | always, and it fills once the NGINX Prometheus exporter sends (the Nginx integration) |
+| [`mysql/`](mysql) | MySQL: servers up, connections, queries per second, the busiest statements, slow queries, the InnoDB buffer pool, rows and traffic | always, and it fills once Alloy's mysql exporter sends (the MySQL integration) |
 
 An **environment** is a Kubernetes cluster, or any machines, that send to the
 customer's one Grafana under one name: the `cluster` label Alloy sets, which is
@@ -98,6 +99,7 @@ browser telemetry).
 | [`postgresql/`](alerts/postgresql/mimir.yaml) | A server down; its connections nearly used up; deadlocks; a replica falling behind |
 | [`redis/`](alerts/redis/mimir.yaml) | An instance down; its memory nearly full; connections refused; a replica that lost its primary |
 | [`nginx/`](alerts/nginx/mimir.yaml) | A server down; dropping connections |
+| [`mysql/`](alerts/mysql/mimir.yaml) | A server down; its connections nearly used up; a replica stopped or falling behind |
 
 Not connected yet: the platform's reconciler, which writes each set into each
 customer's rulers every five minutes, in a namespace of its own (`telopi`),
