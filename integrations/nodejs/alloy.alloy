@@ -3,10 +3,23 @@
 // scraped by Alloy and sent to your Telopi stack every minute. Your ingest
 // key's password is read from the environment variable TELOPI_PASSWORD.
 
-prometheus.scrape "nodejs" {
+// A target on this machine (localhost) is named after the machine and its
+// port, so machines of one environment stay apart.
+discovery.relabel "nodejs" {
   targets = [{
     __address__ = "${NODEJS_ADDRESS}",
   }]
+
+  rule {
+    source_labels = ["__address__"]
+    regex         = "(?:localhost|127\\.0\\.0\\.1|\\[::1\\])(:[0-9]+)"
+    target_label  = "instance"
+    replacement   = constants.hostname + "$1"
+  }
+}
+
+prometheus.scrape "nodejs" {
+  targets         = discovery.relabel.nodejs.output
   // The job the Node.js dashboard and alerts read the process's up from.
   job_name        = "integrations/nodejs"
   metrics_path    = "/metrics"

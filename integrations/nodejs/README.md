@@ -12,8 +12,10 @@ serves the result on a `/metrics` page; Alloy scrapes it once a minute:
 event loop lag (percentiles), V8 heap used and total and per space,
 external memory, garbage collections and their time by kind, open handles
 and requests, CPU, resident memory, open files, start time and the Node.js
-version. Each process is its own `instance`, named after its address, and
-carries its environment's name in the `cluster` label. Any metric of your
+version. Each process is its own `instance`: one on the same machine as
+Alloy (`localhost`) is named after the machine and its port, any other
+after its address. Each carries its environment's name in the `cluster`
+label. Any metric of your
 own that the same page serves is sent too.
 
 The **Node.js** dashboard shows the processes up, event loop lag, restarts,
