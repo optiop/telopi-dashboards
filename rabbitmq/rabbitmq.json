@@ -261,7 +261,7 @@
         "x": 8,
         "y": 1
       },
-      "description": "Messages waiting in queues for a consumer, all selected nodes.",
+      "description": "Messages waiting in queues for a consumer. Each node counts the queues it leads, so the nodes add up to the cluster.",
       "datasource": {
         "type": "prometheus",
         "uid": "gaas-mimir"
@@ -326,7 +326,7 @@
         "x": 12,
         "y": 1
       },
-      "description": "Messages delivered to consumers and not yet acknowledged.",
+      "description": "Messages delivered to consumers and not yet acknowledged, added up over the nodes as above.",
       "datasource": {
         "type": "prometheus",
         "uid": "gaas-mimir"

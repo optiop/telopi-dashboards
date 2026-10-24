@@ -3,10 +3,23 @@
 // your Telopi stack every minute. Your ingest key's password is read from the
 // environment variable TELOPI_PASSWORD.
 
-prometheus.scrape "rabbitmq" {
+// A target on this machine (localhost) is named after the machine and its
+// port, so machines of one environment stay apart.
+discovery.relabel "rabbitmq" {
   targets = [{
     __address__ = "${RABBITMQ_ADDRESS}",
   }]
+
+  rule {
+    source_labels = ["__address__"]
+    regex         = "(?:localhost|127\\.0\\.0\\.1|\\[::1\\])(:[0-9]+)"
+    target_label  = "instance"
+    replacement   = constants.hostname + "$1"
+  }
+}
+
+prometheus.scrape "rabbitmq" {
+  targets         = discovery.relabel.rabbitmq.output
   // The job the RabbitMQ dashboard and alerts read the node's up from.
   job_name        = "integrations/rabbitmq"
   scrape_interval = "60s"

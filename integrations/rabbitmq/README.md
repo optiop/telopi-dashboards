@@ -12,8 +12,12 @@ delivered and acknowledged, messages ready and unacknowledged in queues,
 unroutable and dead-lettered messages, connections, channels, consumers and
 queues, memory against the high watermark, free disk against its limit, file
 descriptors, and the memory and disk alarms. They are totals per node, not
-per queue. Each node is its own `instance`, named after its address, and
-carries its environment's name in the `cluster` label.
+per queue: each node counts the queues whose leader it hosts, so in a
+cluster the nodes' totals add up to the cluster's, which is how the
+dashboard shows them. Each node is its own `instance`: a node on the same
+machine as Alloy (`localhost`) is named after the machine and its port,
+any other after its address. Each carries its environment's name in the
+`cluster` label.
 
 The **RabbitMQ** dashboard shows the nodes up, messages per second and in
 queues, unroutable and dead-lettered messages, connections, alarms, memory,
