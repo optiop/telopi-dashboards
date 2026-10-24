@@ -1,0 +1,22 @@
+# Node.js: any Node.js process that serves prom-client's default metrics,
+# which Alloy scrapes. The README says what each part means.
+id: nodejs
+name: Node.js
+category: runtime
+description: Event loop lag, heap, garbage collection, handles and CPU of each Node.js process, with alerts for one that is down, stalled or restarting.
+signals: [metrics]
+check:
+  datasource: mimir
+  query: group(max_over_time(nodejs_version_info[1h]))
+install: alloy
+dashboards:
+  - uid: telopi-nodejs
+    title: Node.js
+alerts: alerts/nodejs/mimir.yaml
+settings:
+  - name: NODEJS_ADDRESS
+    description: Where the process serves its /metrics page, host and port.
+    example: localhost:3000
+  - name: ENVIRONMENT
+    description: The name of the environment this process belongs to, as you call it in Telopi, such as production.
+    example: production

@@ -1,0 +1,31 @@
+// Node.js: event loop, heap, garbage collection, handles and CPU of one
+// Node.js process, from prom-client's default metrics on its /metrics page,
+// scraped by Alloy and sent to your Telopi stack every minute. Your ingest
+// key's password is read from the environment variable TELOPI_PASSWORD.
+
+prometheus.scrape "nodejs" {
+  targets = [{
+    __address__ = "${NODEJS_ADDRESS}",
+  }]
+  // The job the Node.js dashboard and alerts read the process's up from.
+  job_name        = "integrations/nodejs"
+  metrics_path    = "/metrics"
+  scrape_interval = "60s"
+  forward_to      = [prometheus.remote_write.nodejs.receiver]
+}
+
+prometheus.remote_write "nodejs" {
+  // The environment's name: the Node.js dashboard and its alerts group by it.
+  external_labels = {
+    cluster = "${ENVIRONMENT}",
+  }
+
+  endpoint {
+    url = "${INGEST_URL}/mimir/api/v1/push"
+
+    basic_auth {
+      username = "${USERNAME}"
+      password = sys.env("TELOPI_PASSWORD")
+    }
+  }
+}
