@@ -11,9 +11,12 @@ connects to the server once a minute and reads its statistics views:
 whether it answers (`pg_up`), connections by state, commits and rollbacks,
 rows read and written, cache hits, deadlocks and conflicts, locks by mode,
 the oldest open transaction, each database's size, replication lag, and the
-server's settings. Each server is its own `instance`, named after its
-connection string without the password, and carries its environment's name
-in the `cluster` label.
+server's settings. Alloy sends only the metrics the dashboard, the alerts
+and the tile's check read, about twenty, and drops the rest (the exporter
+reads several hundred settings). Each server is its own `instance`: a
+server on the same machine as Alloy (`localhost`) is named after the
+machine and its port, any other after its connection string without the
+password. Each carries its environment's name in the `cluster` label.
 
 The **PostgreSQL** dashboard shows the servers up, connections against
 `max_connections`, transactions, rows, the cache hit ratio, deadlocks, locks,
@@ -33,9 +36,12 @@ the longest transaction and the size of each database.
 
 - Its connection string in the environment variable `POSTGRES_DSN` of the
   Alloy service, such as
-  `postgresql://telopi:choose-one@localhost:5432/postgres?sslmode=disable`
-  (use `sslmode=require` when the server takes TLS). For systemd, set it in
-  `/etc/default/alloy`.
+  `postgresql://telopi:choose-one@db.internal:5432/postgres?sslmode=require`.
+  Keep `sslmode=require` whenever the server takes TLS, and always across a
+  network; `sslmode=disable` is for a server on the same machine only. The
+  password goes in a URL, so percent-encode any character other than
+  letters, digits and `-._~` (`@` is `%40`, `:` is `%3A`, `/` is `%2F`,
+  `%` is `%25`). For systemd, set it in `/etc/default/alloy`.
 - An ingest key from the Ingest keys page of the Telopi portal. Its username
   is in the snippet; set its password in the environment variable
   `TELOPI_PASSWORD` of the Alloy service.
@@ -43,7 +49,8 @@ the longest transaction and the size of each database.
 
 Add the snippet to Alloy's configuration (`/etc/alloy/config.alloy`) and
 restart Alloy. The server shows on the dashboard within two minutes. For
-more than one server, add each connection string to `data_source_names`.
+another server, copy the five blocks with a new label (`postgresql_orders`,
+say) and its own connection string.
 
 ## Alerts
 

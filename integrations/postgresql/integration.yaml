@@ -19,4 +19,4 @@ settings:
     example: production
 env:
   - name: POSTGRES_DSN
-    description: "The connection string of a monitoring user, with its password: postgresql://telopi:PASSWORD@localhost:5432/postgres?sslmode=disable"
+    description: "The connection string of a monitoring user, with its password: postgresql://telopi:PASSWORD@db.internal:5432/postgres?sslmode=require, the password percent-encoded"
