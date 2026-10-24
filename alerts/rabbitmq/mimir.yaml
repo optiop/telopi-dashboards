@@ -1,0 +1,48 @@
+# RabbitMQ: a node that is down, blocking publishers, or running out of
+# memory or file descriptors. Mimir evaluates them every minute over what
+# RabbitMQ's Prometheus plugin sends through Alloy, one series set per node
+# (instance), the same metrics as the RabbitMQ dashboard (rabbitmq/). Adapted
+# from grafana/jsonnet-libs' rabbitmq-mixin (Apache-2.0).
+thresholds:
+  down_for:
+    default: 2m
+    description: How long Alloy may fail to scrape a node before it alerts.
+  memory_percent:
+    default: 90
+    description: How much of its memory high watermark a node may use, in percent, for 5 minutes before it alerts.
+groups:
+  - name: rabbitmq
+    interval: 1m
+    rules:
+      - alert: RabbitMQDown
+        expr: min by (cluster, instance) (up{job="integrations/rabbitmq"}) == 0
+        for: ${down_for}
+        labels:
+          severity: critical
+        annotations:
+          summary: "RabbitMQ {{ $labels.instance }} is down{{ with $labels.cluster }} in the {{ . }} environment{{ end }}"
+          description: "Alloy has not been able to scrape {{ $labels.instance }} for ${down_for}: the node is down, its Prometheus plugin is off, or it cannot be reached."
+      - alert: RabbitMQPublishersBlocked
+        expr: max by (cluster, instance) (rabbitmq_alarms_memory_used_watermark) > 0 or max by (cluster, instance) (rabbitmq_alarms_free_disk_space_watermark) > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "RabbitMQ {{ $labels.instance }} is blocking publishers{{ with $labels.cluster }} in the {{ . }} environment{{ end }}"
+          description: "A memory or disk alarm is on, so RabbitMQ blocks every connection that publishes until it clears. Drain the queues, or give the node more memory or disk."
+      - alert: RabbitMQMemoryHigh
+        expr: 100 * max by (cluster, instance) (rabbitmq_process_resident_memory_bytes) / max by (cluster, instance) (rabbitmq_resident_memory_limit_bytes) > ${memory_percent}
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "RabbitMQ {{ $labels.instance }} uses {{ $value | printf \"%.0f\" }}% of its memory watermark{{ with $labels.cluster }} in the {{ . }} environment{{ end }}"
+          description: "The node has used over ${memory_percent}% of its memory high watermark for 5 minutes. At 100% it blocks publishers."
+      - alert: RabbitMQFileDescriptorsHigh
+        expr: 100 * max by (cluster, instance) (rabbitmq_process_open_fds) / max by (cluster, instance) (rabbitmq_process_max_fds) > 90
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "RabbitMQ {{ $labels.instance }} uses {{ $value | printf \"%.0f\" }}% of its file descriptors{{ with $labels.cluster }} in the {{ . }} environment{{ end }}"
+          description: "Over 90% of the file descriptor limit has been in use for 5 minutes. When it runs out, new connections fail: raise the limit, or find the clients that leak connections."
