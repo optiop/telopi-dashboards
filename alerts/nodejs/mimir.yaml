@@ -1,0 +1,43 @@
+# Node.js: a process that is down, whose event loop stalls, or that keeps
+# restarting. Mimir evaluates them every minute over prom-client's default
+# metrics sent through Alloy, one series set per process (instance), the
+# same metrics as the Node.js dashboard (nodejs/). NodejsDown is adapted from
+# grafana/jsonnet-libs' nodejs-mixin (Apache-2.0).
+thresholds:
+  down_for:
+    default: 2m
+    description: How long Alloy may fail to scrape a process before it alerts.
+  event_loop_lag_seconds:
+    default: 0.5
+    description: How late, in seconds, the event loop may run (99th percentile) for 10 minutes before it alerts.
+  restarts:
+    default: 2
+    description: How many times a process may start again in 15 minutes before it alerts.
+groups:
+  - name: nodejs
+    interval: 1m
+    rules:
+      - alert: NodejsDown
+        expr: min by (cluster, instance) (up{job="integrations/nodejs"}) == 0
+        for: ${down_for}
+        labels:
+          severity: critical
+        annotations:
+          summary: "Node.js process {{ $labels.instance }} is down{{ with $labels.cluster }} in the {{ . }} environment{{ end }}"
+          description: "Alloy has not been able to scrape {{ $labels.instance }} for ${down_for}: the process is down, serves no /metrics, or cannot be reached."
+      - alert: NodejsEventLoopLagHigh
+        expr: max by (cluster, instance) (nodejs_eventloop_lag_p99_seconds) > ${event_loop_lag_seconds}
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Node.js process {{ $labels.instance }}'s event loop is {{ $value | humanizeDuration }} late{{ with $labels.cluster }} in the {{ . }} environment{{ end }}"
+          description: "The event loop's 99th percentile delay has been over ${event_loop_lag_seconds} seconds for 10 minutes, so every request waits that long. Look for synchronous work, or a CPU that is fully used."
+      - alert: NodejsRestarting
+        expr: sum by (cluster, instance) (changes(process_start_time_seconds{job="integrations/nodejs"}[15m])) > ${restarts}
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Node.js process {{ $labels.instance }} started {{ $value | printf \"%.0f\" }} times in 15 minutes{{ with $labels.cluster }} in the {{ . }} environment{{ end }}"
+          description: "The process keeps crashing and being started again. Its logs say why; out of memory is common."

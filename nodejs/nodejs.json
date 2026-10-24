@@ -1,0 +1,1161 @@
+{
+  "uid": "telopi-nodejs",
+  "title": "Node.js",
+  "description": "Event loop lag, heap, garbage collection, handles and CPU of each Node.js process that serves prom-client's default metrics, in each environment.",
+  "tags": [
+    "telopi",
+    "nodejs"
+  ],
+  "timezone": "browser",
+  "editable": true,
+  "graphTooltip": 1,
+  "schemaVersion": 41,
+  "version": 1,
+  "refresh": "1m",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "links": [
+    {
+      "type": "dashboards",
+      "tags": [
+        "telopi"
+      ],
+      "asDropdown": true,
+      "title": "Telopi dashboards",
+      "includeVars": false,
+      "keepTime": true,
+      "targetBlank": false,
+      "icon": "external link",
+      "tooltip": "",
+      "url": ""
+    }
+  ],
+  "annotations": {
+    "list": []
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "environment",
+        "label": "Environment",
+        "description": "An environment is a Kubernetes cluster, or any machines, that send to this Grafana under one name: the cluster label Alloy sets. Series without one show under All.",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "gaas-mimir"
+        },
+        "query": {
+          "query": "label_values(nodejs_version_info, cluster)",
+          "refId": "environment",
+          "qryType": 1
+        },
+        "definition": "label_values(nodejs_version_info, cluster)",
+        "refresh": 2,
+        "sort": 1,
+        "regex": "",
+        "multi": true,
+        "includeAll": true,
+        "hide": 0,
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "allValue": ".*"
+      },
+      {
+        "name": "instance",
+        "label": "Process",
+        "description": "",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "gaas-mimir"
+        },
+        "query": {
+          "query": "label_values(nodejs_version_info{cluster=~\"$environment\"}, instance)",
+          "refId": "instance",
+          "qryType": 1
+        },
+        "definition": "label_values(nodejs_version_info{cluster=~\"$environment\"}, instance)",
+        "refresh": 2,
+        "sort": 1,
+        "regex": "",
+        "multi": true,
+        "includeAll": true,
+        "hide": 0,
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "allValue": ".+"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Overview",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "panels": []
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Processes up",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 1
+      },
+      "description": "Processes Alloy could scrape at the last scrape.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "count(min by (cluster, instance) (up{cluster=~\"$environment\", instance=~\"$instance\", job=\"integrations/nodejs\"}) == 1)",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "interval": "1m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#4e80ee",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "0",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Processes down",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 1
+      },
+      "description": "Processes Alloy could not scrape at the last scrape.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "count(min by (cluster, instance) (up{cluster=~\"$environment\", instance=~\"$instance\", job=\"integrations/nodejs\"}) == 0)",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "interval": "1m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#22c55e",
+                "value": null
+              },
+              {
+                "color": "#f87171",
+                "value": 1
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "0",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Worst event loop lag",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 1
+      },
+      "description": "The highest 99th percentile event loop delay of any selected process. While the loop is delayed, no request is served.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "max(nodejs_eventloop_lag_p99_seconds{cluster=~\"$environment\", instance=~\"$instance\"})",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "interval": "1m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#22c55e",
+                "value": null
+              },
+              {
+                "color": "#fb923c",
+                "value": 0.1
+              },
+              {
+                "color": "#f87171",
+                "value": 0.5
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Most time in GC",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 1
+      },
+      "description": "The highest share of time any selected process spends collecting garbage.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "max(100 * sum by (cluster, instance) (rate(nodejs_gc_duration_seconds_sum{cluster=~\"$environment\", instance=~\"$instance\"}[$__rate_interval])))",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "interval": "1m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#22c55e",
+                "value": null
+              },
+              {
+                "color": "#fb923c",
+                "value": 5
+              },
+              {
+                "color": "#f87171",
+                "value": 10
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "0",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Heap used",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 1
+      },
+      "description": "V8 heap in use, all selected processes.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "sum(nodejs_heap_size_used_bytes{cluster=~\"$environment\", instance=~\"$instance\"})",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "interval": "1m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#4e80ee",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Restarts",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 1
+      },
+      "description": "Times the selected processes started again over the time range.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "sum(changes(process_start_time_seconds{cluster=~\"$environment\", instance=~\"$instance\", job=\"integrations/nodejs\"}[$__range]))",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "interval": "1m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#22c55e",
+                "value": null
+              },
+              {
+                "color": "#fb923c",
+                "value": 1
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "0",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 8,
+      "type": "row",
+      "title": "Event loop",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "panels": []
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Event loop lag",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 6
+      },
+      "description": "How late the event loop runs its callbacks. Synchronous work (a large JSON, a tight loop) holds every request behind it.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "max by (cluster, instance) (nodejs_eventloop_lag_p50_seconds{cluster=~\"$environment\", instance=~\"$instance\"})",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "interval": "1m",
+          "legendFormat": "{{instance}} p50"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "max by (cluster, instance) (nodejs_eventloop_lag_p99_seconds{cluster=~\"$environment\", instance=~\"$instance\"})",
+          "refId": "B",
+          "instant": false,
+          "range": true,
+          "interval": "1m",
+          "legendFormat": "{{instance}} p99"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "max by (cluster, instance) (nodejs_eventloop_lag_max_seconds{cluster=~\"$environment\", instance=~\"$instance\"})",
+          "refId": "C",
+          "instant": false,
+          "range": true,
+          "interval": "1m",
+          "legendFormat": "{{instance}} max"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": true,
+            "axisSoftMin": 0,
+            "lineInterpolation": "smooth"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Handles and requests",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 6
+      },
+      "description": "Open handles (sockets, timers, files) and pending requests. A count that only grows is a leak.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "max by (cluster, instance) (nodejs_active_handles_total{cluster=~\"$environment\", instance=~\"$instance\"})",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "interval": "1m",
+          "legendFormat": "{{instance}} handles"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "max by (cluster, instance) (nodejs_active_requests_total{cluster=~\"$environment\", instance=~\"$instance\"})",
+          "refId": "B",
+          "instant": false,
+          "range": true,
+          "interval": "1m",
+          "legendFormat": "{{instance}} requests"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": true,
+            "axisSoftMin": 0,
+            "lineInterpolation": "smooth"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 11,
+      "type": "row",
+      "title": "Memory",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 14
+      },
+      "panels": []
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Heap",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 15
+      },
+      "description": "V8 heap in use, and reserved. Used that keeps climbing between collections is a leak.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "max by (cluster, instance) (nodejs_heap_size_used_bytes{cluster=~\"$environment\", instance=~\"$instance\"})",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "interval": "1m",
+          "legendFormat": "{{instance}} used"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "max by (cluster, instance) (nodejs_heap_size_total_bytes{cluster=~\"$environment\", instance=~\"$instance\"})",
+          "refId": "B",
+          "instant": false,
+          "range": true,
+          "interval": "1m",
+          "legendFormat": "{{instance}} total"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": true,
+            "axisSoftMin": 0,
+            "lineInterpolation": "smooth"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Heap by space",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 15
+      },
+      "description": "Heap in use in each V8 space. Old space holds long-lived objects.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "max by (cluster, instance, space) (nodejs_heap_space_size_used_bytes{cluster=~\"$environment\", instance=~\"$instance\"})",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "interval": "1m",
+          "legendFormat": "{{instance}} {{space}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": true,
+            "axisSoftMin": 0,
+            "lineInterpolation": "smooth"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "Process memory",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 15
+      },
+      "description": "Memory the process holds from the system, and memory outside the heap (buffers).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "max by (cluster, instance) (process_resident_memory_bytes{cluster=~\"$environment\", instance=~\"$instance\", job=\"integrations/nodejs\"})",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "interval": "1m",
+          "legendFormat": "{{instance}} resident"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "max by (cluster, instance) (nodejs_external_memory_bytes{cluster=~\"$environment\", instance=~\"$instance\"})",
+          "refId": "B",
+          "instant": false,
+          "range": true,
+          "interval": "1m",
+          "legendFormat": "{{instance}} external"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": true,
+            "axisSoftMin": 0,
+            "lineInterpolation": "smooth"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 15,
+      "type": "row",
+      "title": "Garbage collection and CPU",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 23
+      },
+      "panels": []
+    },
+    {
+      "id": 16,
+      "type": "timeseries",
+      "title": "Time in GC",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 24
+      },
+      "description": "Share of time spent collecting garbage, by kind of collection.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "100 * sum by (cluster, instance, kind) (rate(nodejs_gc_duration_seconds_sum{cluster=~\"$environment\", instance=~\"$instance\"}[$__rate_interval]))",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "interval": "1m",
+          "legendFormat": "{{instance}} {{kind}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": true,
+            "axisSoftMin": 0,
+            "lineInterpolation": "smooth"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 17,
+      "type": "timeseries",
+      "title": "Collections",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 24
+      },
+      "description": "Collections per second, by kind.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "sum by (cluster, instance, kind) (rate(nodejs_gc_duration_seconds_count{cluster=~\"$environment\", instance=~\"$instance\"}[$__rate_interval]))",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "interval": "1m",
+          "legendFormat": "{{instance}} {{kind}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": true,
+            "axisSoftMin": 0,
+            "lineInterpolation": "smooth"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 18,
+      "type": "timeseries",
+      "title": "CPU",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 24
+      },
+      "description": "CPU cores the process uses, on average. Near 1, the single event loop thread is saturated.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "sum by (cluster, instance) (rate(process_cpu_seconds_total{cluster=~\"$environment\", instance=~\"$instance\", job=\"integrations/nodejs\"}[$__rate_interval]))",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "interval": "1m",
+          "legendFormat": "{{instance}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": true,
+            "axisSoftMin": 0,
+            "lineInterpolation": "smooth"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    }
+  ]
+}
