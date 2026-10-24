@@ -1,0 +1,22 @@
+# JVM: any Java process with the Prometheus JMX exporter's Java agent, which
+# Alloy scrapes. The README says what each part means.
+id: jvm
+name: JVM
+category: runtime
+description: Heap and other memory, garbage collection, threads and CPU of each Java process, with alerts for one that is down, out of heap or deadlocked.
+signals: [metrics]
+check:
+  datasource: mimir
+  query: group(max_over_time(jvm_memory_used_bytes[1h]))
+install: alloy
+dashboards:
+  - uid: telopi-jvm
+    title: JVM
+alerts: alerts/jvm/mimir.yaml
+settings:
+  - name: JVM_ADDRESS
+    description: Where the JMX exporter's Java agent serves its metrics, host and port.
+    example: localhost:9404
+  - name: ENVIRONMENT
+    description: The name of the environment this process belongs to, as you call it in Telopi, such as production.
+    example: production

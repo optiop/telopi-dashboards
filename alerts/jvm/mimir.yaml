@@ -1,0 +1,52 @@
+# JVM: a process that is down, nearly out of heap, busy collecting garbage,
+# or deadlocked. Mimir evaluates them every minute over what the Prometheus
+# JMX exporter's Java agent sends through Alloy, one series set per process
+# (instance), the same metrics as the JVM dashboard (jvm/). The heap and
+# deadlock alerts are adapted from grafana/jsonnet-libs' jvm-observ-lib
+# (Apache-2.0).
+thresholds:
+  down_for:
+    default: 2m
+    description: How long Alloy may fail to scrape a process before it alerts.
+  heap_percent:
+    default: 90
+    description: How much of its maximum heap a process may use, in percent, for 10 minutes before it alerts.
+  gc_percent:
+    default: 10
+    description: How much of its time a process may spend collecting garbage, in percent, for 10 minutes before it alerts.
+groups:
+  - name: jvm
+    interval: 1m
+    rules:
+      - alert: JvmDown
+        expr: min by (cluster, instance) (up{job="integrations/jvm"}) == 0
+        for: ${down_for}
+        labels:
+          severity: critical
+        annotations:
+          summary: "Java process {{ $labels.instance }} is down{{ with $labels.cluster }} in the {{ . }} environment{{ end }}"
+          description: "Alloy has not been able to scrape {{ $labels.instance }} for ${down_for}: the process is down, runs without the JMX exporter's agent, or cannot be reached."
+      - alert: JvmHeapNearlyFull
+        expr: 100 * max by (cluster, instance) (jvm_memory_used_bytes{area="heap"}) / max by (cluster, instance) (jvm_memory_max_bytes{area="heap"} > 0) > ${heap_percent}
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Java process {{ $labels.instance }} uses {{ $value | printf \"%.0f\" }}% of its heap{{ with $labels.cluster }} in the {{ . }} environment{{ end }}"
+          description: "Over ${heap_percent}% of the maximum heap has been in use for 10 minutes, so collections free too little. An OutOfMemoryError may follow: look for a leak, or raise -Xmx."
+      - alert: JvmGcTimeHigh
+        expr: 100 * sum by (cluster, instance) (rate(jvm_gc_collection_seconds_sum[5m])) > ${gc_percent}
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Java process {{ $labels.instance }} spends {{ $value | printf \"%.0f\" }}% of its time in GC{{ with $labels.cluster }} in the {{ . }} environment{{ end }}"
+          description: "Over ${gc_percent}% of the time has gone to garbage collection for 10 minutes, so the application pauses and slows. The heap is usually too small for its load."
+      - alert: JvmThreadsDeadlocked
+        expr: max by (cluster, instance) (jvm_threads_deadlocked) > 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Java process {{ $labels.instance }} has {{ $value }} deadlocked threads{{ with $labels.cluster }} in the {{ . }} environment{{ end }}"
+          description: "Threads wait on each other in a cycle and never finish. Only a restart frees them; take a thread dump first to find the cause."
