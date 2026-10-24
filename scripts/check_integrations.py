@@ -66,18 +66,20 @@ def named_list(rel, key, value, extra, reserved):
             out.append(f"{rel}: each of {key} has name, description{''.join(', ' + e for e in extra)} and nothing else")
             continue
         name = item["name"]
+        # Every value is checked to be a string before it is hashed or searched: YAML may give a list or a map.
         if not isinstance(name, str) or not NAME.fullmatch(name):
             out.append(f"{rel}: {key} name {name!r} is upper-case letters, digits and _")
         elif name in reserved:
             out.append(f"{rel}: {key} name {name} is Telopi's own")
         elif name in seen:
             out.append(f"{rel}: {key} name {name} is there twice")
-        seen.add(name)
+        else:
+            seen.add(name)
         for field in ("description", *extra):
             if not isinstance(item[field], str) or not item[field].strip():
                 out.append(f"{rel}: {key} {name}'s {field} is a string")
-            elif '"' in item[field] and field == "example":
-                out.append(f"{rel}: {key} {name}'s example has no double quote: it goes inside a string")
+            elif field == "example" and any(c in item[field] for c in '"\\\n\r'):
+                out.append(f"{rel}: {key} {name}'s example has no double quote, backslash or line break: it goes inside a string")
     return out
 
 
@@ -133,22 +135,24 @@ def manifest_problems(rel, doc, folder, files, dashboards, root=ROOT):
 
     out += [f"{rel}: has no key {k}" for k in sorted(set(doc) - VISIBLE_KEYS)]
     out += [f"{rel}: needs {k}" for k in sorted(REQUIRED_KEYS - set(doc))]
-    if doc.get("category") not in CATEGORIES:
+    if not isinstance(doc.get("category"), str) or doc["category"] not in CATEGORIES:
         out.append(f"{rel}: category is one of {', '.join(CATEGORIES)}")
     desc = doc.get("description")
     if not isinstance(desc, str) or not 0 < len(desc) <= 160 or "\n" in desc.strip():
         out.append(f"{rel}: description is one line of at most 160 characters")
     signals = doc.get("signals")
-    if not isinstance(signals, list) or not signals or len(set(signals)) != len(signals) or set(signals) - set(SIGNALS):
+    if (not isinstance(signals, list) or not signals or not all(isinstance(x, str) for x in signals)
+            or len(set(signals)) != len(signals) or set(signals) - set(SIGNALS)):
         out.append(f"{rel}: signals is a list of some of {', '.join(SIGNALS)}, each once")
     check = doc.get("check")
-    if not isinstance(check, dict) or set(check) != {"datasource", "query"} or check["datasource"] not in DATASOURCES:
+    if (not isinstance(check, dict) or set(check) != {"datasource", "query"}
+            or not isinstance(check["datasource"], str) or check["datasource"] not in DATASOURCES):
         out.append(f"{rel}: check has a datasource (mimir or loki) and a query, and nothing else")
     elif not isinstance(check["query"], str) or "[1h]" not in check["query"]:
         out.append(f"{rel}: check's query looks over the last hour, [1h], so a tile stays Receiving between scrapes")
 
     install = doc.get("install")
-    if install not in INSTALLS:
+    if not isinstance(install, str) or install not in INSTALLS:
         out.append(f"{rel}: install is alloy (its snippet is alloy.alloy) or telopi (Telopi does it; the README says how)")
     elif install == "alloy" and "alloy.alloy" not in files:
         out.append(f"{rel}: install is alloy, so its folder has alloy.alloy")
@@ -159,7 +163,9 @@ def manifest_problems(rel, doc, folder, files, dashboards, root=ROOT):
 
     if "dashboards" in doc:
         listed = doc["dashboards"]
-        if not isinstance(listed, list) or not listed or not all(isinstance(d, dict) and set(d) == {"uid", "title"} for d in listed):
+        if not isinstance(listed, list) or not listed or not all(
+            isinstance(d, dict) and set(d) == {"uid", "title"} and isinstance(d["uid"], str) and isinstance(d["title"], str) for d in listed
+        ):
             out.append(f"{rel}: dashboards is a list of uid and title")
         else:
             folders = set()

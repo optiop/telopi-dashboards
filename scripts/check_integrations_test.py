@@ -145,6 +145,22 @@ class Catalog(unittest.TestCase):
         self.write({"id": "redis", "name": "Redis", "hidden": True, "category": "database"})
         self.assertTrue(any("a hidden integration is an alert set with no tile" in f for f in self.problems()))
 
+    def test_a_list_or_a_map_where_a_string_goes_is_a_problem_not_a_traceback(self):
+        for key, value in [("category", ["database"]), ("install", {"alloy": 1}), ("signals", [["metrics"]]),
+                           ("check", {"datasource": ["mimir"], "query": "x[1h]"}),
+                           ("dashboards", [{"uid": ["telopi-redis"], "title": "Redis"}]),
+                           ("settings", [{"name": ["REDIS_ADDRESS"], "description": "x", "example": "y"}])]:
+            with self.subTest(key=key):
+                self.write(dict(MANIFEST, **{key: value}))
+                self.assertTrue(self.problems())
+
+    def test_an_example_has_no_backslash_or_line_break(self):
+        for example in ["C:\\redis", "localhost\n:6379"]:
+            with self.subTest(example=example):
+                self.write(dict(MANIFEST, settings=[{"name": "REDIS_ADDRESS", "description": "Where.", "example": example}]))
+                self.assertIn("integrations/redis/integration.yaml: settings REDIS_ADDRESS's example has no double quote, "
+                              "backslash or line break: it goes inside a string", self.problems())
+
     def test_render_fills_examples(self):
         out = ci.render(SNIPPET, MANIFEST)
         self.assertIn('"localhost:6379"', out)
