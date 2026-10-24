@@ -3,10 +3,23 @@
 // Telopi stack every minute. Your ingest key's password is read from the
 // environment variable TELOPI_PASSWORD.
 
-prometheus.scrape "nginx" {
+// A target on this machine (localhost) is named after the machine and its
+// port, so machines of one environment stay apart.
+discovery.relabel "nginx" {
   targets = [{
     __address__ = "${NGINX_EXPORTER_ADDRESS}",
   }]
+
+  rule {
+    source_labels = ["__address__"]
+    regex         = "(?:localhost|127\\.0\\.0\\.1|\\[::1\\])(:[0-9]+)"
+    target_label  = "instance"
+    replacement   = constants.hostname + "$1"
+  }
+}
+
+prometheus.scrape "nginx" {
+  targets         = discovery.relabel.nginx.output
   // The job the Nginx dashboard and alerts read the exporter's own up from.
   job_name        = "integrations/nginx"
   scrape_interval = "60s"

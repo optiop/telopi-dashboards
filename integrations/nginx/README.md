@@ -10,8 +10,9 @@ The [NGINX Prometheus exporter](https://github.com/nginxinc/nginx-prometheus-exp
 reads Nginx's `stub_status` page, and Alloy scrapes the exporter once a
 minute: whether Nginx answers (`nginx_up`), requests, connections accepted
 and handled, and open connections reading, writing and waiting. Each server
-is its own `instance`, named after the exporter's address, and carries its
-environment's name in the `cluster` label.
+is its own `instance`: an exporter on the same machine as Alloy
+(`localhost`) is named after the machine and its port, any other after its
+address. Each carries its environment's name in the `cluster` label.
 
 The **Nginx** dashboard shows the servers up, requests per second, requests
 per connection, connections by state, and connections dropped.
@@ -36,11 +37,13 @@ Nginx's access log to Telopi as logs.
 
   ```sh
   docker run -d --network host nginx/nginx-prometheus-exporter:1.5.1 \
+    --web.listen-address=127.0.0.1:9113 \
     --nginx.scrape-uri=http://127.0.0.1:8080/stub_status
   ```
 
-  It listens on port 9113; its address is `NGINX_EXPORTER_ADDRESS`, such as
-  `localhost:9113`.
+  It listens on 127.0.0.1, port 9113, so only this machine reads it; its
+  address is `NGINX_EXPORTER_ADDRESS`, such as `localhost:9113`, with Alloy
+  on the same machine.
 - [Grafana Alloy](https://grafana.com/docs/alloy/latest/set-up/install/) on
   a machine that can reach the exporter.
 - An ingest key from the Ingest keys page of the Telopi portal. Its username
