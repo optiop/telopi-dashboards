@@ -1,0 +1,25 @@
+# Redis: any Redis (or Valkey) Alloy can reach, through Alloy's built-in
+# redis exporter. The README says what each part means.
+id: redis
+name: Redis
+category: database
+description: Memory, clients, commands, hit ratio and keys of each Redis, with alerts for one that is down, full or refusing clients.
+signals: [metrics]
+check:
+  datasource: mimir
+  query: group(max_over_time(redis_up[1h]))
+install: alloy
+dashboards:
+  - uid: telopi-redis
+    title: Redis
+alerts: alerts/redis/mimir.yaml
+settings:
+  - name: REDIS_ADDRESS
+    description: Where Redis listens, host and port.
+    example: localhost:6379
+  - name: ENVIRONMENT
+    description: The name of the environment this Redis belongs to, as you call it in Telopi, such as production.
+    example: production
+env:
+  - name: REDIS_PASSWORD
+    description: The password of a Redis user that may run INFO, or empty when Redis has none.

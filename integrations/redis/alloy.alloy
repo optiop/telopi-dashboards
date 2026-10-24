@@ -1,0 +1,44 @@
+// Redis: memory, clients, commands, hits and keys of one Redis, through
+// Alloy's built-in redis exporter, sent to your Telopi stack every minute.
+// Redis's password, if it has one, is read from the environment variable
+// REDIS_PASSWORD; your ingest key's password from TELOPI_PASSWORD.
+
+prometheus.exporter.redis "redis" {
+  redis_addr     = "${REDIS_ADDRESS}"
+  redis_password = sys.env("REDIS_PASSWORD")
+}
+
+// A target on this machine (localhost) is named after the machine and its
+// port, so machines of one environment stay apart.
+discovery.relabel "redis" {
+  targets = prometheus.exporter.redis.redis.targets
+
+  rule {
+    source_labels = ["instance"]
+    regex         = "(?:[a-z]+://|tcp\\()?(?:localhost|127\\.0\\.0\\.1|\\[::1\\])(:[0-9]+)?.*"
+    target_label  = "instance"
+    replacement   = constants.hostname + "$1"
+  }
+}
+
+prometheus.scrape "redis" {
+  targets         = discovery.relabel.redis.output
+  scrape_interval = "60s"
+  forward_to      = [prometheus.remote_write.redis.receiver]
+}
+
+prometheus.remote_write "redis" {
+  // The environment's name: the Redis dashboard and its alerts group by it.
+  external_labels = {
+    cluster = "${ENVIRONMENT}",
+  }
+
+  endpoint {
+    url = "${INGEST_URL}/mimir/api/v1/push"
+
+    basic_auth {
+      username = "${USERNAME}"
+      password = sys.env("TELOPI_PASSWORD")
+    }
+  }
+}
