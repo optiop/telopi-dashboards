@@ -1,0 +1,30 @@
+# Nginx: a server that is down, or dropping connections. Mimir evaluates them
+# every minute over what the NGINX Prometheus exporter sends through Alloy,
+# one series set per server (instance, the exporter's address), the same
+# metrics as the Nginx dashboard (nginx/).
+thresholds:
+  down_for:
+    default: 2m
+    description: How long Nginx, or its exporter, may not answer before it alerts.
+groups:
+  - name: nginx
+    interval: 1m
+    rules:
+      # nginx_up is 0 when the exporter cannot read stub_status; up is 0 when
+      # Alloy cannot reach the exporter.
+      - alert: NginxDown
+        expr: max by (cluster, instance) (nginx_up) == 0 or min by (cluster, instance) (up{job="integrations/nginx"}) == 0
+        for: ${down_for}
+        labels:
+          severity: critical
+        annotations:
+          summary: "Nginx {{ $labels.instance }} is down{{ with $labels.cluster }} in the {{ . }} environment{{ end }}"
+          description: "For ${down_for}, either the exporter at {{ $labels.instance }} could not read Nginx's stub_status page, or Alloy could not reach the exporter."
+      - alert: NginxDroppingConnections
+        expr: sum by (cluster, instance) (rate(nginx_connections_accepted[5m])) - sum by (cluster, instance) (rate(nginx_connections_handled[5m])) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Nginx {{ $labels.instance }} is dropping connections{{ with $labels.cluster }} in the {{ . }} environment{{ end }}"
+          description: "For 5 minutes Nginx has accepted connections it did not handle, usually because worker_connections or the open files limit is reached. Raise them, or add capacity."

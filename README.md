@@ -35,6 +35,7 @@ data-plane release. Until then, a change here must also be made there.
 | [`kubernetes/`](kubernetes) | Kubernetes: clusters (one row per environment: nodes, pods, restarts, CPU and memory requested and used; problems now, namespaces, nodes, volumes) and Kubernetes: workloads (each Deployment, StatefulSet and DaemonSet with the pods it wants and has, containers that cannot start or ran out of memory, CPU and memory against requests and limits, jobs) | always: every customer's Grafana has it, and it fills once a cluster sends kube-state-metrics (and, for usage, cAdvisor's and the kubelet's metrics), as Grafana's Kubernetes monitoring chart and Alloy send them |
 | [`postgresql/`](postgresql) | PostgreSQL: servers up, connections against `max_connections`, transactions, rows, cache hit ratio, deadlocks, locks, the longest transaction and each database's size | always, and it fills once Alloy's postgres exporter sends (the PostgreSQL integration) |
 | [`redis/`](redis) | Redis: instances up, clients, memory against `maxmemory`, commands per second, hit ratio, the busiest and slowest commands, evictions and keys | always, and it fills once Alloy's redis exporter sends (the Redis integration) |
+| [`nginx/`](nginx) | Nginx: servers up, requests per second and per connection, connections by state, dropped connections | always, and it fills once the NGINX Prometheus exporter sends (the Nginx integration) |
 
 An **environment** is a Kubernetes cluster, or any machines, that send to the
 customer's one Grafana under one name: the `cluster` label Alloy sets, which is
@@ -96,6 +97,7 @@ browser telemetry).
 | [`kubernetes/`](alerts/kubernetes/mimir.yaml) | A pod crash-looping, unable to pull its image or not starting; a Deployment, StatefulSet or DaemonSet short of pods; a container killed for memory; a failed job; a node not ready; a volume nearly full; a container held back by its CPU limit |
 | [`postgresql/`](alerts/postgresql/mimir.yaml) | A server down; its connections nearly used up; deadlocks; a replica falling behind |
 | [`redis/`](alerts/redis/mimir.yaml) | An instance down; its memory nearly full; connections refused; a replica that lost its primary |
+| [`nginx/`](alerts/nginx/mimir.yaml) | A server down; dropping connections |
 
 Not connected yet: the platform's reconciler, which writes each set into each
 customer's rulers every five minutes, in a namespace of its own (`telopi`),

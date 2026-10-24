@@ -1,0 +1,30 @@
+// Nginx: connections and requests of one Nginx, from the NGINX Prometheus
+// exporter that reads its stub_status page, scraped by Alloy and sent to your
+// Telopi stack every minute. Your ingest key's password is read from the
+// environment variable TELOPI_PASSWORD.
+
+prometheus.scrape "nginx" {
+  targets = [{
+    __address__ = "${NGINX_EXPORTER_ADDRESS}",
+  }]
+  // The job the Nginx dashboard and alerts read the exporter's own up from.
+  job_name        = "integrations/nginx"
+  scrape_interval = "60s"
+  forward_to      = [prometheus.remote_write.nginx.receiver]
+}
+
+prometheus.remote_write "nginx" {
+  // The environment's name: the Nginx dashboard and its alerts group by it.
+  external_labels = {
+    cluster = "${ENVIRONMENT}",
+  }
+
+  endpoint {
+    url = "${INGEST_URL}/mimir/api/v1/push"
+
+    basic_auth {
+      username = "${USERNAME}"
+      password = sys.env("TELOPI_PASSWORD")
+    }
+  }
+}
