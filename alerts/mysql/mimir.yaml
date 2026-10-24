@@ -1,0 +1,53 @@
+# MySQL: a server that is down or short of connections, or a replica that
+# stopped or fell behind. Mimir evaluates them every minute over what Alloy's
+# mysql exporter sends, one series set per server (instance), the same
+# metrics as the MySQL dashboard (mysql/). MySQLDown is adapted from
+# prometheus/mysqld_exporter's mysqld-mixin (Apache-2.0).
+thresholds:
+  down_for:
+    default: 2m
+    description: How long the exporter may fail to query a server before it alerts.
+  connections_percent:
+    default: 80
+    description: How much of max_connections may be in use, in percent, for 10 minutes before it alerts.
+  replication_lag_seconds:
+    default: 300
+    description: How far behind its source a replica may be, in seconds, for 5 minutes before it alerts.
+groups:
+  - name: mysql
+    interval: 1m
+    rules:
+      - alert: MySQLDown
+        expr: max by (cluster, instance) (mysql_up) == 0
+        for: ${down_for}
+        labels:
+          severity: critical
+        annotations:
+          summary: "MySQL {{ $labels.instance }} is down{{ with $labels.cluster }} in the {{ . }} environment{{ end }}"
+          description: "Alloy has not been able to query {{ $labels.instance }} for ${down_for}: the server is down, refuses the monitoring user, or cannot be reached."
+      - alert: MySQLConnectionsNearlyUsed
+        expr: 100 * max by (cluster, instance) (mysql_global_status_threads_connected) / max by (cluster, instance) (mysql_global_variables_max_connections) > ${connections_percent}
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "MySQL {{ $labels.instance }} uses {{ $value | printf \"%.0f\" }}% of its connections{{ with $labels.cluster }} in the {{ . }} environment{{ end }}"
+          description: "Over ${connections_percent}% of max_connections have been in use for 10 minutes. At 100% new connections are refused: look for idle connections or a missing pool, or raise max_connections."
+      # Only on replicas: the exporter sends these where SHOW REPLICA STATUS has a row,
+      # named slave_* or, from MySQL 8.0.22, replica_* and *_source.
+      - alert: MySQLReplicationStopped
+        expr: min by (cluster, instance) (mysql_slave_status_slave_io_running or mysql_slave_status_replica_io_running) == 0 or min by (cluster, instance) (mysql_slave_status_slave_sql_running or mysql_slave_status_replica_sql_running) == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "MySQL replica {{ $labels.instance }} stopped replicating{{ with $labels.cluster }} in the {{ . }} environment{{ end }}"
+          description: "The replica's I/O or SQL thread has been stopped for 5 minutes, so it serves data that grows stale. SHOW REPLICA STATUS says why."
+      - alert: MySQLReplicationLagging
+        expr: max by (cluster, instance) (mysql_slave_status_seconds_behind_master or mysql_slave_status_seconds_behind_source) > ${replication_lag_seconds}
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "MySQL replica {{ $labels.instance }} is {{ $value | humanizeDuration }} behind{{ with $labels.cluster }} in the {{ . }} environment{{ end }}"
+          description: "The replica has been over ${replication_lag_seconds} seconds behind its source for 5 minutes."

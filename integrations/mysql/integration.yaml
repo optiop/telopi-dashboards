@@ -1,0 +1,22 @@
+# MySQL: any MySQL or MariaDB server Alloy can connect to, through Alloy's
+# built-in mysql exporter. The README says what each part means.
+id: mysql
+name: MySQL
+category: database
+description: Connections, queries, slow queries, InnoDB buffer pool and replication of each MySQL or MariaDB, with alerts for one that is down or full.
+signals: [metrics]
+check:
+  datasource: mimir
+  query: group(max_over_time(mysql_up[1h]))
+install: alloy
+dashboards:
+  - uid: telopi-mysql
+    title: MySQL
+alerts: alerts/mysql/mimir.yaml
+settings:
+  - name: ENVIRONMENT
+    description: The name of the environment this MySQL belongs to, as you call it in Telopi, such as production.
+    example: production
+env:
+  - name: MYSQL_DSN
+    description: "The connection string of a monitoring user, with its password: telopi:PASSWORD@(localhost:3306)/"
