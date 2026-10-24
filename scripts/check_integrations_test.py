@@ -19,6 +19,7 @@ MANIFEST = {
     "signals": ["metrics"],
     "check": {"datasource": "mimir", "query": "group(max_over_time(redis_up[1h]))"},
     "install": "alloy",
+    "alerts": "alerts/redis/mimir.yaml",
     "settings": [{"name": "REDIS_ADDRESS", "description": "Where Redis listens.", "example": "localhost:6379"}],
 }
 
@@ -37,7 +38,7 @@ prometheus.remote_write "redis" {
 }
 """
 
-README = "# Redis\n\n## What it collects\n\nx\n\n## What you need\n\nx\n\n## Source and licence\n\nx\n"
+README = "# Redis\n\n## What it collects\n\nx\n\n## What you need\n\nx\n\n## Alerts\n\nx\n\n## Source and licence\n\nx\n"
 
 
 class Catalog(unittest.TestCase):
@@ -105,7 +106,7 @@ class Catalog(unittest.TestCase):
                       self.problems())
 
     def test_a_readme_with_alerts_says_what_they_mean(self):
-        self.write(dict(MANIFEST, alerts="alerts/redis/mimir.yaml"))
+        self.write(MANIFEST, readme=README.replace("## Alerts", "## Alerting"))
         self.assertIn("integrations/redis/README.md: has a heading ## Alerts", self.problems())
 
     def test_the_snippets_placeholders_and_environment(self):
@@ -160,6 +161,13 @@ class Catalog(unittest.TestCase):
                 self.write(dict(MANIFEST, settings=[{"name": "REDIS_ADDRESS", "description": "Where.", "example": example}]))
                 self.assertIn("integrations/redis/integration.yaml: settings REDIS_ADDRESS's example has no double quote, "
                               "backslash or line break: it goes inside a string", self.problems())
+
+    def test_every_alert_set_is_some_integrations(self):
+        (self.root / "alerts" / "kafka").mkdir()
+        (self.root / "alerts" / "kafka" / "mimir.yaml").write_text("thresholds: {}\ngroups: []\n")
+        self.write(dict(MANIFEST, alerts="alerts/redis/mimir.yaml"), readme=README + "\n## Alerts\n\nx\n")
+        self.assertEqual(self.problems(), ["alerts/kafka/mimir.yaml: no integration names it, so no customer would get it; "
+                                           "add one (hidden: true for a set with no tile)"])
 
     def test_render_fills_examples(self):
         out = ci.render(SNIPPET, MANIFEST)

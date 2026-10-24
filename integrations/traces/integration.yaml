@@ -1,0 +1,6 @@
+# The traces alert set applies to whatever traces a customer sends, so it
+# has no tile: it is here so the platform finds it.
+id: traces
+name: Traces
+hidden: true
+alerts: alerts/traces/mimir.yaml

@@ -1,0 +1,21 @@
+# Kubernetes: a cluster's workloads and nodes, from kube-state-metrics, the
+# kubelets and cAdvisor, through an Alloy in the cluster.
+id: kubernetes
+name: Kubernetes
+category: infrastructure
+description: Nodes, pods and workloads of each cluster, with alerts for crash loops, pods short, memory kills and full volumes.
+signals: [metrics]
+check:
+  datasource: mimir
+  query: group(max_over_time(kube_node_info[1h]))
+install: alloy
+dashboards:
+  - uid: telopi-kubernetes-clusters
+    title: "Kubernetes: clusters"
+  - uid: telopi-kubernetes-workloads
+    title: "Kubernetes: workloads"
+alerts: alerts/kubernetes/mimir.yaml
+settings:
+  - name: ENVIRONMENT
+    description: The cluster's name, as you call it in Telopi, such as production.
+    example: production

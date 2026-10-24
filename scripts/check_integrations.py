@@ -263,6 +263,11 @@ def check(root, alloy=None):
             if alloy and not found:
                 out += alloy_problems(snippet_rel, text, doc, alloy)
 
+    # The platform reads alert sets only through the catalog.
+    for path in sorted((root / "alerts").glob("*/*.yaml")):
+        set_rel = path.relative_to(root).as_posix()
+        if set_rel not in claimed:
+            out.append(f"{set_rel}: no integration names it, so no customer would get it; add one (hidden: true for a set with no tile)")
     return out, len(index)
 
 

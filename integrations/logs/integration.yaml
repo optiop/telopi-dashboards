@@ -1,0 +1,6 @@
+# The logs alert set applies to whatever logs a customer sends, so it has no
+# tile: it is here so the platform finds it.
+id: logs
+name: Logs
+hidden: true
+alerts: alerts/logs/loki.yaml
