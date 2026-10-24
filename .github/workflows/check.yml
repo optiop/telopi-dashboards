@@ -1,5 +1,6 @@
 # Every dashboard follows the rules in the README and Grafana imports it, and
-# every alert rule set follows them and promtool or Loki's ruler takes it.
+# every alert rule set follows them and promtool or Loki's ruler takes it, and
+# every integration's manifest, README and Alloy snippet follow theirs.
 # main is what every customer's Grafana reads, so nothing reaches it unchecked.
 name: Check dashboards
 
@@ -29,7 +30,7 @@ jobs:
       - name: PyYAML, which reads the alert rules
         run: pip install pyyaml==6.0.3
       - name: The check's own tests
-        run: python3 scripts/check_test.py && python3 scripts/check_alerts_test.py
+        run: python3 scripts/check_test.py && python3 scripts/check_alerts_test.py && python3 scripts/check_integrations_test.py
       - name: The rules, and no uid changed
         run: python3 scripts/check.py --base "origin/${{ github.base_ref || 'main' }}"
       - name: Grafana imports each dashboard
@@ -39,3 +40,6 @@ jobs:
           docker run -d --name loki-check -p 127.0.0.1:3100:3100 -v "$PWD/scripts/loki-check.yaml:/etc/loki/check.yaml:ro" grafana/loki:3.7.7 -config.file=/etc/loki/check.yaml
           for i in $(seq 1 30); do curl -sf http://127.0.0.1:3100/ready && break; sleep 2; done
           python3 scripts/check_alerts.py --loki http://127.0.0.1:3100 --promtool "docker run --rm -v {dir}:/rules --entrypoint promtool prom/prometheus:v3.5.0"
+      # The Alloy Telopi's own stacks run; snippets should work with any recent one.
+      - name: Each integration, and Alloy takes its snippet
+        run: python3 scripts/check_integrations.py --alloy "docker run --rm -v {dir}:/snippets grafana/alloy:v1.20.0"
