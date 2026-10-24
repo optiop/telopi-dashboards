@@ -1,0 +1,22 @@
+# RabbitMQ: any RabbitMQ 3.8 or later node, from its built-in Prometheus
+# plugin, which Alloy scrapes. The README says what each part means.
+id: rabbitmq
+name: RabbitMQ
+category: queue
+description: Queues, messages, consumers, connections, memory and disk of each RabbitMQ node, with alerts for one that is down or blocking publishers.
+signals: [metrics]
+check:
+  datasource: mimir
+  query: group(max_over_time(rabbitmq_build_info[1h]))
+install: alloy
+dashboards:
+  - uid: telopi-rabbitmq
+    title: RabbitMQ
+alerts: alerts/rabbitmq/mimir.yaml
+settings:
+  - name: RABBITMQ_ADDRESS
+    description: Where the node's Prometheus plugin listens, host and port (15692 by default).
+    example: localhost:15692
+  - name: ENVIRONMENT
+    description: The name of the environment this RabbitMQ belongs to, as you call it in Telopi, such as production.
+    example: production
