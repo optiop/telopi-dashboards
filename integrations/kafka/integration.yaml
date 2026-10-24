@@ -1,0 +1,22 @@
+# Kafka: any Kafka cluster Alloy can reach, through Alloy's built-in kafka
+# exporter. The README says what each part means.
+id: kafka
+name: Kafka
+category: queue
+description: Brokers, topics, partitions, replication and consumer group lag of each Kafka cluster, with alerts for lost brokers and lagging consumers.
+signals: [metrics]
+check:
+  datasource: mimir
+  query: group(max_over_time(kafka_brokers[1h]))
+install: alloy
+dashboards:
+  - uid: telopi-kafka
+    title: Kafka
+alerts: alerts/kafka/mimir.yaml
+settings:
+  - name: KAFKA_ADDRESS
+    description: Where one of the cluster's brokers listens, host and port.
+    example: localhost:9092
+  - name: ENVIRONMENT
+    description: The name of the environment this Kafka belongs to, as you call it in Telopi, such as production.
+    example: production

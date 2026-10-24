@@ -1,0 +1,50 @@
+# Kafka: a cluster Alloy can no longer read, a broker that left, partitions
+# short of replicas, consumers falling behind. Mimir evaluates them every
+# minute over what Alloy's kafka exporter sends, one series set per cluster
+# (instance, the broker address Alloy connects to), the same metrics as the
+# Kafka dashboard (kafka/). Adapted from grafana/jsonnet-libs'
+# kafka-observ-lib (Apache-2.0).
+thresholds:
+  silent_for:
+    default: 5m
+    description: How long a cluster that was sending may send nothing before it alerts.
+  consumer_lag:
+    default: 1000
+    description: How many messages a consumer group may be behind on a topic, for 15 minutes, before it alerts.
+groups:
+  - name: kafka
+    interval: 1m
+    rules:
+      # Sent within the last hour, but not now: Alloy cannot reach any broker.
+      - alert: KafkaSilent
+        expr: max by (cluster, instance) (max_over_time(kafka_brokers[1h])) unless on (cluster, instance) max by (cluster, instance) (kafka_brokers)
+        for: ${silent_for}
+        labels:
+          severity: critical
+        annotations:
+          summary: "Kafka {{ $labels.instance }} stopped sending{{ with $labels.cluster }} in the {{ . }} environment{{ end }}"
+          description: "Nothing has arrived from Kafka at {{ $labels.instance }} for at least ${silent_for}: its brokers, or the Alloy that reads them, are down or cannot be reached."
+      - alert: KafkaBrokerLost
+        expr: max by (cluster, instance) (kafka_brokers) < max by (cluster, instance) (max_over_time(kafka_brokers[1h]))
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Kafka {{ $labels.instance }} has {{ $value }} brokers, fewer than in the last hour{{ with $labels.cluster }} in the {{ . }} environment{{ end }}"
+          description: "A broker left the cluster for 5 minutes. If you removed it on purpose, this clears an hour later."
+      - alert: KafkaUnderReplicatedPartitions
+        expr: sum by (cluster, instance, topic) (kafka_topic_partition_under_replicated_partition) > 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Kafka topic {{ $labels.topic }} has {{ $value }} under-replicated partitions{{ with $labels.cluster }} in the {{ . }} environment{{ end }}"
+          description: "For 5 minutes some partitions of {{ $labels.topic }} have had fewer in-sync replicas than replicas, so one more broker failure can lose data or stop writes. Look for a broker that is down or overloaded."
+      - alert: KafkaConsumerLagHigh
+        expr: sum by (cluster, instance, consumergroup, topic) (kafka_consumergroup_uncommitted_offsets{topic!="__consumer_offsets"} or kafka_consumergroup_lag{topic!="__consumer_offsets"}) > ${consumer_lag}
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Kafka consumer group {{ $labels.consumergroup }} is {{ $value | printf \"%.0f\" }} messages behind on {{ $labels.topic }}{{ with $labels.cluster }} in the {{ . }} environment{{ end }}"
+          description: "The group has been over ${consumer_lag} messages behind for 15 minutes: its consumers are too slow, stuck or gone."
