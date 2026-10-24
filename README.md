@@ -33,6 +33,7 @@ data-plane release. Until then, a change here must also be made there.
 | [`uptime/`](uptime) | Uptime: which checked sites are up, their availability and response time | Telopi checks their sites |
 | [`nodes/`](nodes) | Machines: CPU, load, memory, disks and network of each machine, one row per machine and graphs over time | always: every customer's Grafana has it, and it fills once their machines send the Prometheus node exporter's metrics or Alloy's unix exporter's (Alloy's Kubernetes monitoring includes it) |
 | [`kubernetes/`](kubernetes) | Kubernetes: clusters (one row per environment: nodes, pods, restarts, CPU and memory requested and used; problems now, namespaces, nodes, volumes) and Kubernetes: workloads (each Deployment, StatefulSet and DaemonSet with the pods it wants and has, containers that cannot start or ran out of memory, CPU and memory against requests and limits, jobs) | always: every customer's Grafana has it, and it fills once a cluster sends kube-state-metrics (and, for usage, cAdvisor's and the kubelet's metrics), as Grafana's Kubernetes monitoring chart and Alloy send them |
+| [`postgresql/`](postgresql) | PostgreSQL: servers up, connections against `max_connections`, transactions, rows, cache hit ratio, deadlocks, locks, the longest transaction and each database's size | always, and it fills once Alloy's postgres exporter sends (the PostgreSQL integration) |
 
 An **environment** is a Kubernetes cluster, or any machines, that send to the
 customer's one Grafana under one name: the `cluster` label Alloy sets, which is
@@ -92,6 +93,7 @@ browser telemetry).
 | [`logs/`](alerts/logs/loki.yaml) | A service logging many errors |
 | [`machines/`](alerts/machines/mimir.yaml) | A machine that stopped sending; its disk, memory or CPU nearly used up |
 | [`kubernetes/`](alerts/kubernetes/mimir.yaml) | A pod crash-looping, unable to pull its image or not starting; a Deployment, StatefulSet or DaemonSet short of pods; a container killed for memory; a failed job; a node not ready; a volume nearly full; a container held back by its CPU limit |
+| [`postgresql/`](alerts/postgresql/mimir.yaml) | A server down; its connections nearly used up; deadlocks; a replica falling behind |
 
 Not connected yet: the platform's reconciler, which writes each set into each
 customer's rulers every five minutes, in a namespace of its own (`telopi`),

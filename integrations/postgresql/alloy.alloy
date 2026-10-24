@@ -1,0 +1,56 @@
+// PostgreSQL: connections, transactions, cache hits, locks, deadlocks and
+// size of each database, through Alloy's built-in postgres exporter, sent to
+// your Telopi stack every minute. The connection string, with its password,
+// is read from the environment variable POSTGRES_DSN; your ingest key's
+// password from TELOPI_PASSWORD.
+
+prometheus.exporter.postgres "postgresql" {
+  data_source_names = [sys.env("POSTGRES_DSN")]
+}
+
+// A server on this machine (localhost) is named after the machine and its
+// port, so servers on different machines of one environment stay apart.
+discovery.relabel "postgresql" {
+  targets = prometheus.exporter.postgres.postgresql.targets
+
+  rule {
+    source_labels = ["instance"]
+    regex         = "(?:[a-z]+://|tcp\\()?(?:localhost|127\\.0\\.0\\.1|\\[::1\\])(:[0-9]+)?.*"
+    target_label  = "instance"
+    replacement   = constants.hostname + "$1"
+  }
+}
+
+prometheus.scrape "postgresql" {
+  targets         = discovery.relabel.postgresql.output
+  scrape_interval = "60s"
+  forward_to      = [prometheus.relabel.postgresql.receiver]
+}
+
+// Only what the PostgreSQL dashboard, its alerts and its check read: the
+// exporter sends hundreds of settings besides.
+prometheus.relabel "postgresql" {
+  forward_to = [prometheus.remote_write.postgresql.receiver]
+
+  rule {
+    source_labels = ["__name__"]
+    regex         = "pg_database_size_bytes|pg_locks_count|pg_replication_is_replica|pg_replication_lag_seconds|pg_settings_max_connections|pg_settings_superuser_reserved_connections|pg_stat_activity_count|pg_stat_activity_max_tx_duration|pg_stat_database_blks_hit|pg_stat_database_blks_read|pg_stat_database_conflicts|pg_stat_database_deadlocks|pg_stat_database_temp_bytes|pg_stat_database_tup_deleted|pg_stat_database_tup_fetched|pg_stat_database_tup_inserted|pg_stat_database_tup_updated|pg_stat_database_xact_commit|pg_stat_database_xact_rollback|pg_up"
+    action        = "keep"
+  }
+}
+
+prometheus.remote_write "postgresql" {
+  // The environment's name: the PostgreSQL dashboard and its alerts group by it.
+  external_labels = {
+    cluster = "${ENVIRONMENT}",
+  }
+
+  endpoint {
+    url = "${INGEST_URL}/mimir/api/v1/push"
+
+    basic_auth {
+      username = "${USERNAME}"
+      password = sys.env("TELOPI_PASSWORD")
+    }
+  }
+}
