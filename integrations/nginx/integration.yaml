@@ -1,0 +1,22 @@
+# Nginx: any Nginx with stub_status on, through the NGINX Prometheus
+# exporter, which Alloy scrapes. The README says what each part means.
+id: nginx
+name: Nginx
+category: web_server
+description: Requests and connections of each Nginx, from its stub_status page, with alerts for one that is down or dropping connections.
+signals: [metrics]
+check:
+  datasource: mimir
+  query: group(max_over_time(nginx_up[1h]))
+install: alloy
+dashboards:
+  - uid: telopi-nginx
+    title: Nginx
+alerts: alerts/nginx/mimir.yaml
+settings:
+  - name: NGINX_EXPORTER_ADDRESS
+    description: Where the NGINX Prometheus exporter listens, host and port.
+    example: localhost:9113
+  - name: ENVIRONMENT
+    description: The name of the environment this Nginx belongs to, as you call it in Telopi, such as production.
+    example: production
