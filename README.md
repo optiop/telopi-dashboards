@@ -125,6 +125,127 @@ real problem and never on a customer who sends none of that telemetry (no
 `absent()`). Before a new rule reaches customers it runs on Telopi's own
 tenants for a week without paging anyone.
 
+## Integrations
+
+[`integrations/`](integrations) is the catalog the Telopi portal's
+**Integrations** page shows (Telopi's ADR-0058): one tile per technology a
+customer can send, with how to send it, its dashboards and its alerts. The
+platform reads it from `main` as it reads the alert sets, every few minutes,
+so a tile ships with its merge, without a platform release. Not connected
+yet: the platform reads it, and takes its list of alert sets from it, from
+its next release; until then the alert sets are listed in the platform too.
+
+An integration is a folder `integrations/<id>/`, listed in
+[`integrations/index.yaml`](integrations/index.yaml), with three files:
+
+| File | What it is |
+| --- | --- |
+| `integration.yaml` | The manifest: the tile, its check, its sets and its settings (below) |
+| `alloy.alloy` | The Alloy snippet the customer adds, with placeholders the portal fills or names |
+| `README.md` | Its docs, which the portal shows on the tile's Install tab |
+
+Its dashboards are a set folder at the root (`<set>/*.json`) and its alerts a
+set in `alerts/<set>/`, exactly as every set above: an integration names
+them, it does not hold them.
+
+### The manifest
+
+```yaml
+id: redis                   # the folder's name: lower-case letters, digits and _
+name: Redis                 # what the tile says, at most 40 characters
+category: database          # database, queue, web_server, runtime, infrastructure or website
+description: Memory, clients, commands and keys of each Redis.   # one line, at most 160 characters
+signals: [metrics]          # some of metrics, logs, traces
+check:                      # does the tenant receive it? Data in the last hour means yes
+  datasource: mimir         # mimir (PromQL) or loki (LogQL)
+  query: group(max_over_time(redis_up[1h]))
+install: alloy              # alloy: alloy.alloy is the snippet; telopi: Telopi does it, the README says how
+dashboards:                 # optional: every dashboard of its set's folder, by uid, with its title
+  - uid: telopi-redis
+    title: Redis
+alerts: alerts/redis/mimir.yaml   # optional: its alert set's file
+settings:                   # optional: the snippet's own ${NAME} placeholders, which the customer fills
+  - name: REDIS_ADDRESS
+    description: Where Redis listens, host and port.
+    example: localhost:6379
+env:                        # optional: secrets the snippet reads with sys.env("NAME"), besides TELOPI_PASSWORD
+  - name: REDIS_PASSWORD
+    description: The password of a Redis user that may run INFO.
+```
+
+- **The check** runs as an instant query against the customer's own Mimir or
+  Loki, with its own login, and the tile says *Receiving data* when it returns
+  anything. It looks over the last hour (`[1h]`), so a tile does not flicker
+  between scrapes: `group(max_over_time(<a metric every target has>[1h]))` for
+  metrics, `sum(count_over_time({<its streams>}[1h]))` for logs.
+- **A tile's state** is *Not set up*, *Receiving data* (the check returns
+  data) or *Alerts on* (that, and the customer has its alert set on).
+- **A set with no tile** (the `traces` and `logs` alert sets, which apply to
+  whatever a customer sends) is an integration too, so the platform finds it:
+  `id`, `name`, `hidden: true` and `alerts`, nothing else, and no snippet.
+
+### The snippet
+
+`alloy.alloy` is a whole piece of Alloy configuration a customer adds beside
+their own (Alloy reads every `.alloy` file of a directory as one), sending
+straight to their Telopi stack:
+
+- **`${INGEST_URL}` and `${USERNAME}`** are filled by the portal with the
+  stack's ingest address and the username of the ingest key the customer
+  picks. Every snippet uses both.
+- **The password is never a placeholder:** the snippet reads it with
+  `sys.env("TELOPI_PASSWORD")`, and the customer sets that variable on the
+  machine. Any other secret (a database password, a DSN with one) is read the
+  same way and declared under `env`.
+- **`${NAME}`** of the manifest's `settings` is a value the customer fills: an
+  address, a port, an environment's name. Upper-case, inside a string, never a
+  secret. Its `example` is what the check validates the snippet with.
+- **Every component is labelled `<id>` or `<id>_<something>`**
+  (`prometheus.remote_write "redis"`, `prometheus.scrape "redis_exporter"`),
+  so any number of snippets share one Alloy without a clash. Each sends with
+  a writer of its own (`prometheus.remote_write`, `loki.write`), to
+  `${INGEST_URL}/mimir/api/v1/push` for metrics and
+  `${INGEST_URL}/loki/loki/api/v1/push` for logs, and sets the `cluster`
+  external label to the environment's name where its dashboards group by it.
+- Scrape every minute (`scrape_interval = "60s"`): the dashboards' rates
+  assume it.
+
+### The README
+
+The portal shows it on the tile's Install tab, so it is written for the
+customer. It has these headings, which the check looks for:
+
+- `## What it collects`: the metrics or logs, and what the dashboards show.
+- `## What you need`: what the customer sets up on their side (an exporter,
+  a read-only database user, a status page) and where the snippet goes.
+- `## Alerts` (where it has an alert set): each alert, when it fires and the
+  threshold the customer can change.
+- `## Source and licence`: where the dashboards and alerts come from and
+  their licence. Content forked from a mixin keeps its licence (Apache-2.0
+  ones, from `grafana/jsonnet-libs` or the exporter's own) and names it here;
+  nothing comes from a Grafana Cloud stack or from content whose licence
+  forbids a hosted service.
+
+Tiles show names, never logos.
+
+### Adding an integration
+
+1. Add its dashboards as a set folder and its alerts as `alerts/<set>/`, by
+   the rules above, if it has them.
+2. Add `integrations/<id>/` with the three files, and `<id>` to
+   `integrations/index.yaml`.
+3. Send it yourself: run the snippet against a stack, see the check's query
+   return data and the dashboards fill.
+4. Run the checks (below) and open a pull request. A tile without a working
+   check, dashboards and alerts does not ship (ADR-0058).
+
+[`scripts/check_integrations.py`](scripts/check_integrations.py) checks each
+manifest field above, that the index lists each folder once, that the sets it
+names exist and its dashboards are their whole folder, the README's headings,
+the snippet's placeholders, environment variables and labels, and, given
+`--alloy`, that `alloy fmt` parses the snippet and `alloy validate` takes it
+with each placeholder at its example.
+
 ## Checks
 
 ```sh
@@ -145,6 +266,11 @@ docker run -d --name loki-check -p 127.0.0.1:3100:3100 \
 python3 scripts/check_alerts.py --loki http://127.0.0.1:3100 \
   --promtool "docker run --rm -v {dir}:/rules --entrypoint promtool prom/prometheus:v3.5.0"
 docker rm -f loki-check
+
+# The integrations, and Alloy takes each snippet.
+python3 scripts/check_integrations_test.py    # the integration check's own tests (needs PyYAML)
+python3 scripts/check_integrations.py \
+  --alloy "docker run --rm -v {dir}:/snippets grafana/alloy:v1.20.0"
 ```
 
 [CI](.github/workflows/check.yml) runs all of them on every pull request and on

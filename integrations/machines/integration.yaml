@@ -1,0 +1,19 @@
+# Machines: any Linux machine (or VM) through Alloy's unix exporter, the
+# Prometheus node exporter's metrics. The README says what each part means.
+id: machines
+name: Machines
+category: infrastructure
+description: CPU, load, memory, disks and network of each Linux machine, with alerts for one that stops sending or fills up.
+signals: [metrics]
+check:
+  datasource: mimir
+  query: group(max_over_time(node_uname_info[1h]))
+install: alloy
+dashboards:
+  - uid: telopi-node-exporter
+    title: Machines
+alerts: alerts/machines/mimir.yaml
+settings:
+  - name: ENVIRONMENT
+    description: The name of the environment these machines belong to, as you call it in Telopi, such as production.
+    example: production
