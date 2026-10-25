@@ -53,9 +53,9 @@ an annotation, on by default: each deploy event Telopi writes into the
 customer's Loki from a deploy source (the GitHub, GitLab and Argo CD
 integrations), `{service_name="telopi-deploys"}`, with its service and status
 as the title and the deploy's title as the text. It follows the Environment
-variable through the event's `environment` label, so under one environment
-it shows only the deploys whose environment has that name; under All, every
-deploy.
+variable through the event's `environment` label: the environment set on the
+deploy source in the portal, the same name as the `cluster` label. Under one
+environment it shows that environment's deploys; under All, every deploy.
 
 A new set is a new folder. It reaches customers once the platform knows which
 customers have it, so add the folder and the platform's change together.
