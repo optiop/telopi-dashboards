@@ -22,7 +22,7 @@ so you can query it in Explore.
 
 ## What you need
 
-Argo CD 2.3 or later, whose notifications controller is part of it.
+Argo CD 2.5 or later, whose notifications controller is part of it.
 
 1. In the Telopi portal, on **Integrations**, open **Argo CD** and add a
    deploy source. You get a URL and a secret, shown once.
@@ -37,7 +37,8 @@ Argo CD 2.3 or later, whose notifications controller is part of it.
    ```
 
 3. Add the webhook, its template and its triggers to `argocd-notifications-cm`
-   (merge these keys into yours; put the URL from the portal in `url`):
+   (merge these keys into yours; put the URL from the portal in `url`, and
+   your Argo CD's address in `argocdUrl`, for the link to each sync):
 
    ```yaml
    apiVersion: v1
@@ -46,6 +47,8 @@ Argo CD 2.3 or later, whose notifications controller is part of it.
      name: argocd-notifications-cm
      namespace: argocd
    data:
+     context: |
+       argocdUrl: <your Argo CD URL>
      service.webhook.telopi: |
        url: <the URL from the portal>
        headers:
@@ -68,21 +71,24 @@ Argo CD 2.3 or later, whose notifications controller is part of it.
                "phase": "{{with .app.status.operationState}}{{.phase}}{{end}}",
                "sync": "{{.app.status.sync.status}}",
                "health": "{{.app.status.health.status}}",
-               "url": "{{.context.argocdUrl}}/applications/{{.app.metadata.name}}"
+               "url": "{{.context.argocdUrl}}/applications/{{.app.metadata.namespace}}/{{.app.metadata.name}}"
              }
      trigger.telopi-on-sync-succeeded: |
        - when: app.status.operationState != nil and app.status.operationState.phase in ['Succeeded']
+         oncePer: app.status.operationState?.syncResult?.revision
          send: [telopi]
      trigger.telopi-on-sync-failed: |
        - when: app.status.operationState != nil and app.status.operationState.phase in ['Error', 'Failed']
+         oncePer: app.status.operationState?.syncResult?.revision
          send: [telopi]
      trigger.telopi-on-health-degraded: |
        - when: app.status.health.status == 'Degraded'
+         oncePer: app.status.operationState?.syncResult?.revision
          send: [telopi]
    ```
 
-   The triggers are Telopi's own, with the conditions of Argo CD's catalog
-   triggers `on-sync-succeeded`, `on-sync-failed` and `on-health-degraded`,
+   The triggers are Telopi's own, with the conditions and `oncePer` of Argo
+   CD's catalog triggers `on-sync-succeeded`, `on-sync-failed` and `on-health-degraded`,
    so any triggers you already have are left alone.
 
 4. Subscribe each application whose deploys you want, with these annotations

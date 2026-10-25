@@ -4,7 +4,7 @@
 id: github
 name: GitHub
 category: deploys
-description: Your deployments, workflow runs and releases on GitHub, as deploy events beside your telemetry.
+description: Your deployments and releases on GitHub, and the workflow runs you choose, as deploy events beside your telemetry.
 signals: [logs]
 check:
   datasource: loki

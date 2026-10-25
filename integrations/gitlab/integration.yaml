@@ -4,7 +4,7 @@
 id: gitlab
 name: GitLab
 category: deploys
-description: Your deployments and pipelines on GitLab, as deploy events beside your telemetry.
+description: Your deployments on GitLab, and the pipelines you choose, as deploy events beside your telemetry.
 signals: [logs]
 check:
   datasource: loki

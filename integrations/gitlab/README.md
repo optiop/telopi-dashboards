@@ -5,8 +5,14 @@ you can see what changed when something did.
 
 ## What it collects
 
-GitLab sends Telopi a webhook for each deployment and pipeline event. Telopi
-keeps the facts of the deploy and writes them as one log line into your own
+GitLab sends Telopi a webhook for each deployment event, and, if you choose,
+each pipeline event. Telopi records a pipeline only when the pipeline filter
+set on the deploy source (a ref, such as `main`) is set and matches, so CI
+pipelines that are not deploys stay out; without a filter, pipelines are
+ignored. When a deploy is reported both ways, as a deployment and as a
+pipeline, Telopi keeps the deployment and drops the pipeline.
+
+For each deploy Telopi keeps the facts of the deploy and writes them as one log line into your own
 Loki: the service (the project's short name), the environment, the status
 (`success`, `failure` or `in_progress`), the version or ref, the commit, its
 title, who started it, the link to it on GitLab, the project and the time.
@@ -30,11 +36,12 @@ so you can query it in Explore.
    - **URL**: the URL from the portal.
    - **Secret token**: the token from the portal. Telopi refuses a request
      that does not carry it.
-   - **Trigger**: **Deployment events** and **Pipeline events**, and nothing
-     else.
+   - **Trigger**: **Deployment events**. **Pipeline events** is optional:
+     add it only if a pipeline deploys without a GitLab environment, and set
+     the pipeline filter on the deploy source in the portal to the ref it
+     deploys from. Nothing else.
    - **SSL verification**: on.
-3. Save, then **Test > Pipeline events** to send one. The tile says
-   *Receiving data* once Telopi has written one.
+3. Save. The tile says *Receiving data* after your next deployment.
 
 ## Source and licence
 
