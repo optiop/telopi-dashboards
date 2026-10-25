@@ -22,6 +22,8 @@ so you can query it in Explore.
 
 1. In the Telopi portal, on **Integrations**, open **GitLab** and add a deploy
    source. You get a URL and a secret token, shown once.
+   Set the environment on the deploy source in the portal to the environment
+   this deploys to, so its deploys show on that environment's dashboards.
 2. On GitLab, in the project's (or the group's, for all of its projects;
    group webhooks need GitLab Premium) **Settings > Webhooks > Add new
    webhook**:

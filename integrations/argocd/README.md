@@ -9,7 +9,7 @@ something did.
 Argo CD's notifications post to Telopi when an application's sync succeeds
 or fails and when its health turns degraded. Telopi keeps the facts of the
 deploy and writes them as one log line into your own Loki: the service (the
-application's name), the environment (its destination), the status
+application's name), the environment, the status
 (`success`, `failure` or `degraded`), the revision, the link to it in your
 Argo CD, the repository and the time.
 
@@ -26,6 +26,8 @@ Argo CD 2.3 or later, whose notifications controller is part of it.
 
 1. In the Telopi portal, on **Integrations**, open **Argo CD** and add a
    deploy source. You get a URL and a secret, shown once.
+   Set the environment on the deploy source in the portal to the environment
+   this deploys to, so its deploys show on that environment's dashboards.
 2. Put the secret into `argocd-notifications-secret`, in Argo CD's namespace,
    under the key `telopi-token`:
 
@@ -68,19 +70,20 @@ Argo CD 2.3 or later, whose notifications controller is part of it.
                "health": "{{.app.status.health.status}}",
                "url": "{{.context.argocdUrl}}/applications/{{.app.metadata.name}}"
              }
-     trigger.on-sync-succeeded: |
+     trigger.telopi-on-sync-succeeded: |
        - when: app.status.operationState != nil and app.status.operationState.phase in ['Succeeded']
          send: [telopi]
-     trigger.on-sync-failed: |
+     trigger.telopi-on-sync-failed: |
        - when: app.status.operationState != nil and app.status.operationState.phase in ['Error', 'Failed']
          send: [telopi]
-     trigger.on-health-degraded: |
+     trigger.telopi-on-health-degraded: |
        - when: app.status.health.status == 'Degraded'
          send: [telopi]
    ```
 
-   If you already have these triggers (from Argo CD's catalog, for Slack or
-   email), keep yours and add `telopi` to each one's `send` list instead.
+   The triggers are Telopi's own, with the conditions of Argo CD's catalog
+   triggers `on-sync-succeeded`, `on-sync-failed` and `on-health-degraded`,
+   so any triggers you already have are left alone.
 
 4. Subscribe each application whose deploys you want, with these annotations
    on the `Application`:
@@ -88,9 +91,9 @@ Argo CD 2.3 or later, whose notifications controller is part of it.
    ```yaml
    metadata:
      annotations:
-       notifications.argoproj.io/subscribe.on-sync-succeeded.telopi: ""
-       notifications.argoproj.io/subscribe.on-sync-failed.telopi: ""
-       notifications.argoproj.io/subscribe.on-health-degraded.telopi: ""
+       notifications.argoproj.io/subscribe.telopi-on-sync-succeeded.telopi: ""
+       notifications.argoproj.io/subscribe.telopi-on-sync-failed.telopi: ""
+       notifications.argoproj.io/subscribe.telopi-on-health-degraded.telopi: ""
    ```
 
    The tile says *Receiving data* after the next sync of one of them.

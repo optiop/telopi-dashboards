@@ -23,6 +23,8 @@ so you can query it in Explore.
 
 1. In the Telopi portal, on **Integrations**, open **GitHub** and add a deploy
    source. You get a payload URL and a secret, shown once.
+   Set the environment on the deploy source in the portal to the environment
+   this deploys to, so its deploys show on that environment's dashboards.
 2. On GitHub, in the repository's (or the organization's, for all of its
    repositories) **Settings > Webhooks > Add webhook**:
    - **Payload URL**: the URL from the portal.

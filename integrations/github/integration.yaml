@@ -8,5 +8,5 @@ description: Your deployments, workflow runs and releases on GitHub, as deploy e
 signals: [logs]
 check:
   datasource: loki
-  query: sum(count_over_time({service_name="telopi-deploys", provider="github"}[1h]))
+  query: sum(count_over_time({service_name="telopi-deploys", provider="github"}[7d]))
 install: telopi

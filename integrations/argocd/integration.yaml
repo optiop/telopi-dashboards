@@ -8,5 +8,5 @@ description: Your Argo CD syncs and degraded applications, as deploy events besi
 signals: [logs]
 check:
   datasource: loki
-  query: sum(count_over_time({service_name="telopi-deploys", provider="argocd"}[1h]))
+  query: sum(count_over_time({service_name="telopi-deploys", provider="argocd"}[7d]))
 install: telopi

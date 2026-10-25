@@ -32,6 +32,9 @@ PLACEHOLDER = re.compile(r"\$\{([A-Z][A-Z0-9_]*)\}")
 SYS_ENV = re.compile(r"""sys\.env\(\s*"([^"]*)"\s*\)""")
 # A block's header: `prometheus.scrape "label" {`; a nested block has no label.
 COMPONENT = re.compile(r'^\s*([a-z_][a-z0-9_]*(?:\.[a-z_][a-z0-9_]*)+)\s+"([^"]*)"\s*\{', re.M)
+# The window a check looks over: an hour, so a tile stays Receiving between scrapes; a
+# deploy source may look over a week, since deploys are rare.
+WINDOWS = {"deploys": ["[1h]", "[7d]"]}
 ALERTS = re.compile(r"alerts/([a-z][a-z0-9_]*)/(mimir|loki)\.yaml")
 # What a README says, as these headings; Alerts only where the integration has a set.
 README_HEADINGS = ["## What it collects", "## What you need", "## Source and licence"]
@@ -148,8 +151,11 @@ def manifest_problems(rel, doc, folder, files, dashboards, root=ROOT):
     if (not isinstance(check, dict) or set(check) != {"datasource", "query"}
             or not isinstance(check["datasource"], str) or check["datasource"] not in DATASOURCES):
         out.append(f"{rel}: check has a datasource (mimir or loki) and a query, and nothing else")
-    elif not isinstance(check["query"], str) or "[1h]" not in check["query"]:
-        out.append(f"{rel}: check's query looks over the last hour, [1h], so a tile stays Receiving between scrapes")
+    else:
+        windows = WINDOWS.get(doc["category"]) if isinstance(doc.get("category"), str) else None
+        if not isinstance(check["query"], str) or not any(w in check["query"] for w in windows or ["[1h]"]):
+            out.append(f"{rel}: check's query looks over {' or '.join(windows)}" if windows else
+                       f"{rel}: check's query looks over the last hour, [1h], so a tile stays Receiving between scrapes")
 
     install = doc.get("install")
     if not isinstance(install, str) or install not in INSTALLS:
