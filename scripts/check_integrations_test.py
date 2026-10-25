@@ -139,6 +139,14 @@ class Catalog(unittest.TestCase):
         (self.folder / "alloy.alloy").unlink()
         self.assertEqual(self.problems(), [])
 
+    def test_a_deploy_source_is_a_telopi_install_with_no_sets(self):
+        (self.folder / "alloy.alloy").unlink()
+        (self.root / "alerts" / "redis" / "mimir.yaml").unlink()
+        self.write({"id": "redis", "name": "Redis", "category": "deploys", "description": "Deploys.", "signals": ["logs"],
+                    "check": {"datasource": "loki", "query": 'sum(count_over_time({service_name="telopi-deploys"}[1h]))'},
+                    "install": "telopi"}, readme=README.replace("## Alerts\n\nx\n\n", ""))
+        self.assertEqual(self.problems(), [])
+
     def test_a_hidden_integration_is_only_an_alert_set(self):
         (self.folder / "alloy.alloy").unlink()
         self.write({"id": "redis", "name": "Redis", "hidden": True, "alerts": "alerts/redis/mimir.yaml"})

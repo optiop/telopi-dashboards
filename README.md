@@ -169,7 +169,7 @@ them, it does not hold them.
 ```yaml
 id: redis                   # the folder's name: lower-case letters, digits and _
 name: Redis                 # what the tile says, at most 40 characters
-category: database          # database, queue, web_server, runtime, infrastructure or website
+category: database          # database, queue, web_server, runtime, infrastructure, website or deploys
 description: Memory, clients, commands and keys of each Redis.   # one line, at most 160 characters
 signals: [metrics]          # some of metrics, logs, traces
 check:                      # does the tenant receive it? Data in the last hour means yes

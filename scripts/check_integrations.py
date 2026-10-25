@@ -19,7 +19,7 @@ import yaml
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 # The portal groups tiles by these, in this order.
-CATEGORIES = ["database", "queue", "web_server", "runtime", "infrastructure", "website"]
+CATEGORIES = ["database", "queue", "web_server", "runtime", "infrastructure", "website", "deploys"]
 SIGNALS = ["metrics", "logs", "traces"]
 DATASOURCES = {"mimir", "loki"}
 INSTALLS = {"alloy", "telopi"}
