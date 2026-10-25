@@ -13,6 +13,9 @@ application's name), the environment, the status
 (`success`, `failure` or `degraded`), the revision, the link to it in your
 Argo CD, the repository and the time.
 
+A failed sync raises the **DeployFailed** alert; a degraded application is
+collected and shows on the dashboards, but does not alert.
+
 It never keeps your manifests, diffs or lists of changed resources: Argo CD
 sends only the fields below.
 

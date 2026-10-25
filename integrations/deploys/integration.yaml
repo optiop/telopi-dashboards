@@ -1,0 +1,7 @@
+# The deploys alert set applies to every deploy source (GitHub, GitLab,
+# Argo CD), and a set is one integration's, so it has no tile: it is here so
+# the platform finds it.
+id: deploys
+name: Deploys
+hidden: true
+alerts: alerts/deploys/loki.yaml
