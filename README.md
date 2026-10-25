@@ -107,7 +107,7 @@ browser telemetry).
 | [`website/`](alerts/website/loki.yaml) | JavaScript errors; Largest Contentful Paint, Interaction to Next Paint or Cumulative Layout Shift turning poor |
 | [`traces/`](alerts/traces/mimir.yaml) | A service failing its requests, or slow |
 | [`logs/`](alerts/logs/loki.yaml) | A service logging many errors |
-| [`deploys/`](alerts/deploys/loki.yaml) | A deploy that failed, from any deploy source (GitHub, GitLab, Argo CD) |
+| [`deploys/`](alerts/deploys/loki.yaml) | A deploy that failed, from any deploy source (GitHub, GitLab, Argo CD); Argo CD's degraded is collected but does not alert |
 | [`machines/`](alerts/machines/mimir.yaml) | A machine that stopped sending; its disk, memory or CPU nearly used up |
 | [`kubernetes/`](alerts/kubernetes/mimir.yaml) | A pod crash-looping, unable to pull its image or not starting; a Deployment, StatefulSet or DaemonSet short of pods; a container killed for memory; a failed job; a node not ready; a volume nearly full; a container held back by its CPU limit |
 | [`postgresql/`](alerts/postgresql/mimir.yaml) | A server down; its connections nearly used up; deadlocks; a replica falling behind |
