@@ -1,0 +1,12 @@
+# Argo CD: the customer's Argo CD notifications post to Telopi, which writes
+# each sync as one log line into their Loki (Telopi's ADR-0060), so there is
+# nothing to install besides Argo CD's own configuration.
+id: argocd
+name: Argo CD
+category: deploys
+description: Your Argo CD syncs and degraded applications, as deploy events beside your telemetry.
+signals: [logs]
+check:
+  datasource: loki
+  query: sum(count_over_time({service_name="telopi-deploys", provider="argocd"}[7d]))
+install: telopi

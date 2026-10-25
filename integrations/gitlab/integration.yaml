@@ -1,0 +1,12 @@
+# GitLab: the customer points a project's or a group's webhook at Telopi,
+# which writes each deploy as one log line into their Loki (Telopi's
+# ADR-0060), so there is nothing to install.
+id: gitlab
+name: GitLab
+category: deploys
+description: Your deployments on GitLab, and the pipelines you choose, as deploy events beside your telemetry.
+signals: [logs]
+check:
+  datasource: loki
+  query: sum(count_over_time({service_name="telopi-deploys", provider="gitlab"}[7d]))
+install: telopi

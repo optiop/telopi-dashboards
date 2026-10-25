@@ -1,0 +1,12 @@
+# GitHub: the customer points a repository's or an organization's webhook at
+# Telopi, which writes each deploy as one log line into their Loki
+# (Telopi's ADR-0060), so there is nothing to install.
+id: github
+name: GitHub
+category: deploys
+description: Your deployments and releases on GitHub, and the workflow runs you choose, as deploy events beside your telemetry.
+signals: [logs]
+check:
+  datasource: loki
+  query: sum(count_over_time({service_name="telopi-deploys", provider="github"}[7d]))
+install: telopi

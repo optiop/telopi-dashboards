@@ -169,7 +169,7 @@ them, it does not hold them.
 ```yaml
 id: redis                   # the folder's name: lower-case letters, digits and _
 name: Redis                 # what the tile says, at most 40 characters
-category: database          # database, queue, web_server, runtime, infrastructure or website
+category: database          # database, queue, web_server, runtime, infrastructure, website or deploys
 description: Memory, clients, commands and keys of each Redis.   # one line, at most 160 characters
 signals: [metrics]          # some of metrics, logs, traces
 check:                      # does the tenant receive it? Data in the last hour means yes
@@ -193,7 +193,9 @@ env:                        # optional: secrets the snippet reads with sys.env("
   Loki, with its own login, and the tile says *Receiving data* when it returns
   anything. It looks over the last hour (`[1h]`), so a tile does not flicker
   between scrapes: `group(max_over_time(<a metric every target has>[1h]))` for
-  metrics, `sum(count_over_time({<its streams>}[1h]))` for logs.
+  metrics, `sum(count_over_time({<its streams>}[1h]))` for logs. A deploy
+  source's (category `deploys`) may look over the last week (`[7d]`) instead:
+  deploys are rare, and an hour would drop its tile back to *Not set up*.
 - **A tile's state** is *Not set up*, *Receiving data* (the check returns
   data) or *Alerts on* (that, and the customer has its alert set on).
 - **A set with no tile** (the `traces` and `logs` alert sets, which apply to
