@@ -1,0 +1,16 @@
+# Deploys: a deploy that failed. Loki evaluates it every minute over the
+# deploy events Telopi writes from the customer's deploy sources (GitHub,
+# GitLab, Argo CD; Telopi's ADR-0060), one line each, whose status is failure.
+thresholds: {}
+groups:
+  - name: deploys
+    interval: 1m
+    rules:
+      - alert: DeployFailed
+        expr: |
+          sum by (provider, service, environment) (count_over_time({service_name="telopi-deploys"} | json status | status="failure" [10m])) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: "A deploy of {{ $labels.service }} to {{ $labels.environment }} failed"
+          description: "{{ $value }} failed deploys of {{ $labels.service }} to {{ $labels.environment }} on {{ $labels.provider }} in the last 10 minutes."
