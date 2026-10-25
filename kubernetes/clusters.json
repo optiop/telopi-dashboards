@@ -69,7 +69,23 @@
     ]
   },
   "annotations": {
-    "list": []
+    "list": [
+      {
+        "name": "Deploys",
+        "enable": true,
+        "hide": false,
+        "iconColor": "purple",
+        "datasource": {
+          "type": "loki",
+          "uid": "gaas-loki"
+        },
+        "expr": "{service_name=\"telopi-deploys\", environment=~\"$environment\"} | json",
+        "titleFormat": "{{service}} {{status}}",
+        "textFormat": "{{title}}",
+        "tagKeys": "provider,environment,version",
+        "instant": false
+      }
+    ]
   },
   "panels": [
     {

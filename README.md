@@ -48,6 +48,15 @@ the name the customer gives it in the Telopi portal. A dashboard whose data has
 it starts with an *Environment* variable over it, All by default; a series
 without the label still shows under All.
 
+**Deploys** show on Kubernetes, Machines and each integration's dashboard as
+an annotation, on by default: each deploy event Telopi writes into the
+customer's Loki from a deploy source (the GitHub, GitLab and Argo CD
+integrations), `{service_name="telopi-deploys"}`, with its service and status
+as the title and the deploy's title as the text. It follows the Environment
+variable through the event's `environment` label, so under one environment
+it shows only the deploys whose environment has that name; under All, every
+deploy.
+
 A new set is a new folder. It reaches customers once the platform knows which
 customers have it, so add the folder and the platform's change together.
 
