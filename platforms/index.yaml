@@ -1,0 +1,9 @@
+# Every platform, each a folder here, in the order the portal's Connect page
+# shows its tiles (Telopi's ADR-0065). CI checks it names each folder once.
+- kubernetes
+- linux
+- docker
+- macos
+- windows
+- ecs
+- ansible

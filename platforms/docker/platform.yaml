@@ -1,0 +1,76 @@
+# Docker or Docker Compose: Alloy's image beside the customer's containers,
+# with the Machines snippet as its configuration, on the host's network and
+# process namespace and with the host's / mounted read-only, so the machine it
+# reports is the host.
+id: docker
+name: Docker or Docker Compose
+description: A Linux host that runs Docker. A compose.yaml runs Alloy beside your containers and sends the host's CPU, memory, disks and network.
+status: ready
+guide: integrations/machines/README.md
+collects: [machines]
+steps:
+  - title: Write Alloy's configuration
+    text: >-
+      In a new folder on the Docker host, write Alloy's configuration. It has
+      no secret.
+    language: bash
+    code: |
+      mkdir -p telopi-alloy && cd telopi-alloy
+      cat > config.alloy <<'ALLOY'
+      ${SNIPPET}
+      ALLOY
+  - title: Put the password in .env
+    text: >-
+      In the same folder, paste your ingest key's password when this asks:
+      it is not shown, and it goes in no command, so not in your shell's
+      history. It is written to .env, which only you read.
+    language: bash
+    code: |
+      bash <<'TELOPI'
+      read -rsp "Ingest key password: " TELOPI_PASSWORD </dev/tty
+      echo
+      touch .env
+      chmod 600 .env
+      printf "TELOPI_PASSWORD='%s'\n" "$TELOPI_PASSWORD" > .env
+      TELOPI
+  - title: Add compose.yaml
+    text: >-
+      Save this as compose.yaml in the same folder. Alloy shares the host's
+      network and processes and reads the host's / mounted read-only, so the
+      metrics, disks included, are the host's, not the container's. Its own
+      page listens on 127.0.0.1:12399, not Alloy's usual 12345, so it does
+      not clash with an Alloy already on the host.
+    language: yaml
+    code: |
+      services:
+        alloy:
+          image: grafana/alloy:v1.20.0
+          restart: unless-stopped
+          command: run --server.http.listen-addr=127.0.0.1:12399 --storage.path=/var/lib/alloy/data /etc/alloy/config.alloy
+          env_file: .env
+          environment:
+            TELOPI_ROOTFS: /host/root
+          network_mode: host
+          pid: host
+          volumes:
+            - ./config.alloy:/etc/alloy/config.alloy:ro
+            - alloy-data:/var/lib/alloy/data
+            - /:/host/root:ro
+
+      volumes:
+        alloy-data:
+  - title: Start it
+    text: Start Alloy in the background; Docker starts it again after a restart.
+    language: bash
+    code: |
+      docker compose up -d
+      docker compose ps alloy
+  - title: Check that it arrived
+    text: >-
+      Alloy should be running and log no error (in a container it always
+      logs one about udev, which is harmless and left out). Within two
+      minutes Connect in the portal says Receiving data, and the Machines dashboard in your
+      Grafana fills. A 401 in the log is a wrong username or password.
+    language: bash
+    code: |
+      docker compose logs --since 5m alloy | grep -E "level=error|HTTP status 40[13]" | grep -v "udev device properties" || echo "No errors in the last five minutes."

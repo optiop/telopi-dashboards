@@ -1,0 +1,9 @@
+# Windows: not yet. Alloy runs on Windows as a service, but the Machines
+# snippet is Linux's, so this tile waits for a Windows integration.
+id: windows
+name: Windows
+description: Windows Server and desktops through Alloy as a Windows service. Coming soon; Grafana's guide shows how to install Alloy meanwhile.
+status: soon
+guide: https://grafana.com/docs/alloy/latest/set-up/install/windows/
+collects: []
+steps: []

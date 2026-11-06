@@ -1,0 +1,84 @@
+# macOS: Alloy's standalone binary for Apple silicon, run by launchd as a
+# daemon, with the Machines snippet (Alloy's unix exporter, which reads
+# macOS's own counters; no systemd or journald) as its configuration.
+id: macos
+name: macOS
+description: A Mac with Apple silicon, through Alloy run by launchd. Sends the Mac's CPU, memory, disks and network. In beta.
+status: beta
+guide: integrations/machines/README.md
+collects: [machines]
+steps:
+  - title: Install and start Alloy
+    text: >-
+      Run this in Terminal, as a user that may use sudo, and paste your
+      ingest key's password when it asks: it is not shown, and it goes in no
+      command, so not in your shell's history. It downloads Alloy's binary
+      for Apple silicon from Grafana's releases to /usr/local/bin, writes its
+      configuration and the password to /usr/local/etc/telopi, which only
+      root reads, and a launchd daemon, com.telopi.alloy, and starts it. Run
+      it again to change the configuration or the password.
+    language: bash
+    code: |
+      sudo bash -s <<'TELOPI'
+      set -euo pipefail
+
+      # The password, from the terminal: it goes in no command.
+      read -rsp "Ingest key password: " TELOPI_PASSWORD </dev/tty
+      echo
+
+      # Alloy's standalone binary for Apple silicon.
+      mkdir -p /usr/local/bin /usr/local/etc/telopi /usr/local/var/lib/telopi-alloy /usr/local/var/log
+      cd "$(mktemp -d)"
+      curl -fsSLO https://github.com/grafana/alloy/releases/download/v1.20.0/alloy-darwin-arm64.zip
+      unzip -oq alloy-darwin-arm64.zip
+      install -m 755 alloy-darwin-arm64 /usr/local/bin/alloy
+
+      # The configuration and the password: only root, which runs Alloy, reads them.
+      chmod 700 /usr/local/etc/telopi
+      cat > /usr/local/etc/telopi/config.alloy <<'ALLOY'
+      ${SNIPPET}
+      ALLOY
+      touch /usr/local/etc/telopi/alloy.env
+      chmod 600 /usr/local/etc/telopi/alloy.env
+      printf "TELOPI_PASSWORD='%s'\n" "$TELOPI_PASSWORD" > /usr/local/etc/telopi/alloy.env
+
+      # The daemon has no secret: its shell reads the password's file, then runs Alloy.
+      plist=/Library/LaunchDaemons/com.telopi.alloy.plist
+      cat > "$plist" <<'PLIST'
+      <?xml version="1.0" encoding="UTF-8"?>
+      <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+      <plist version="1.0">
+      <dict>
+        <key>Label</key>
+        <string>com.telopi.alloy</string>
+        <key>ProgramArguments</key>
+        <array>
+          <string>/bin/sh</string>
+          <string>-c</string>
+          <string>set -a; . /usr/local/etc/telopi/alloy.env; exec /usr/local/bin/alloy run --storage.path=/usr/local/var/lib/telopi-alloy /usr/local/etc/telopi/config.alloy</string>
+        </array>
+        <key>RunAtLoad</key>
+        <true/>
+        <key>KeepAlive</key>
+        <true/>
+        <key>StandardOutPath</key>
+        <string>/usr/local/var/log/telopi-alloy.log</string>
+        <key>StandardErrorPath</key>
+        <string>/usr/local/var/log/telopi-alloy.log</string>
+      </dict>
+      </plist>
+      PLIST
+
+      launchctl bootout system/com.telopi.alloy 2>/dev/null || true
+      launchctl bootstrap system "$plist"
+      TELOPI
+  - title: Check that it arrived
+    text: >-
+      Alloy should be running and log no error. Within two minutes Connect in
+      the portal says Receiving data, and the Machines dashboard in your
+      Grafana fills; macOS has fewer counters than Linux, so some of its
+      panels stay empty. A 401 in the log is a wrong username or password.
+    language: bash
+    code: |
+      sudo launchctl print system/com.telopi.alloy | grep -E "^\s+state = "
+      sudo tail -n 200 /usr/local/var/log/telopi-alloy.log | grep -E "level=error|HTTP status 40[13]" || echo "No errors in the last lines of the log."

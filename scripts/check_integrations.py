@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
-"""Checks the integrations catalog in integrations/, as CI does (README, "Integrations").
+"""Checks the integrations catalog in integrations/ and the platforms in platforms/, as CI does
+(README, "Integrations" and "Platforms").
 
-  check_integrations.py              the manifests, their snippets' placeholders and their READMEs
+  check_integrations.py              the manifests, their snippets' placeholders and their READMEs,
+                                     and each platform's manifest and steps
   check_integrations.py --alloy CMD  also: Alloy formats and validates each snippet (CMD runs alloy;
                                      {dir} is the snippets' directory, mounted at /snippets)
 """
 import argparse
 import json
 import pathlib
+import plistlib
 import re
 import shlex
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -277,14 +281,250 @@ def check(root, alloy=None):
     return out, len(index)
 
 
+# Platforms (Telopi's ADR-0065): where the agent runs, each a tile of the portal's Connect page.
+STATUSES = {"ready", "beta", "soon"}
+LANGUAGES = {"bash", "yaml", "shell", "text", "alloy"}
+PLATFORM_KEYS = {"id", "name", "description", "status", "guide", "collects", "steps"}
+STEP_KEYS = {"title", "text", "language", "code"}
+# What a step's code may hold: the API fills SNIPPET and INGEST_URL, the portal the rest. Never
+# PASSWORD: a step asks for the password, so it is in no command and no shell history.
+STEP_PLACEHOLDERS = {"INGEST_URL", "USERNAME", "ENVIRONMENT", "SNIPPET"}
+# What an embedded snippet may hold: what the API and the portal fill, nothing the customer must.
+SNIPPET_PLACEHOLDERS = {"INGEST_URL", "USERNAME", "ENVIRONMENT"}
+# How a step asks for the password: read without echo, into TELOPI_PASSWORD.
+PASSWORD_READ = re.compile(r"\bread\s+-[a-z]*s[a-z]*\b.*\b" + PASSWORD_ENV + r"\b")
+# A heredoc's start: <<WORD, <<'WORD', <<"WORD" or <<-WORD; not a here-string (<<<).
+HEREDOC = re.compile(r"""(?<!<)<<(-?)\s*(['"]?)([A-Za-z_][A-Za-z0-9_]*)\2""")
+# What a step is parsed with: example values where the API and the portal fill it.
+STEP_EXAMPLE = dict(EXAMPLE, ENVIRONMENT="production")
+# The password variable set to a value, as VAR=x or VAR: x; only a variable ($x) or printf's %s may follow.
+PASSWORD_SET = re.compile(PASSWORD_ENV + r"""\s*[=:]\s*['"]?([^'"\s]*)""")
+GUIDE_URL = re.compile(r"""https://[^\s"'<>]+""")
+GUIDE_PATH = re.compile(r"[A-Za-z0-9_.-]+(/[A-Za-z0-9_.-]+)*")
+
+
+def guide_problems(rel, guide, root):
+    if isinstance(guide, str) and GUIDE_URL.fullmatch(guide):
+        return []
+    if isinstance(guide, str) and GUIDE_PATH.fullmatch(guide) and ".." not in guide.split("/") and (root / guide).is_file():
+        return []
+    return [f"{rel}: guide is a file of this repository or an https URL"]
+
+
+def step_problems(rel, i, step):
+    """What is wrong with one step; i counts from 1."""
+    at = f"{rel}: step {i}"
+    if not isinstance(step, dict) or set(step) != STEP_KEYS:
+        return [f"{at} has title, text, language and code, and nothing else"]
+    out = [f"{at}'s {k} is a string" for k in sorted(STEP_KEYS) if not isinstance(step[k], str) or not step[k].strip()]
+    if out:
+        return out
+    if step["language"] not in LANGUAGES:
+        out.append(f"{at}'s language is one of {', '.join(sorted(LANGUAGES))}")
+    out += [f"{at}'s {k} has no placeholder: only code is filled" for k in ("title", "text") if PLACEHOLDER.search(step[k])]
+    code = step["code"]
+    used = set(PLACEHOLDER.findall(code))
+    if "PASSWORD" in used:
+        out.append(f"{at}: has no ${{PASSWORD}}: a step asks for the password, so it is in no command or history")
+    out += [f"{at}: ${{{n}}} is not one of {', '.join(sorted(STEP_PLACEHOLDERS))}"
+            for n in sorted(used - STEP_PLACEHOLDERS - {"PASSWORD"})]
+    for line in code.splitlines():
+        if "${SNIPPET}" in line and line != "${SNIPPET}":
+            out.append(f"{at}: ${{SNIPPET}} is a line of its own, unindented, so the snippet goes in as it is")
+    if code.count("${SNIPPET}") > 1:
+        out.append(f"{at}: has ${{SNIPPET}} once at most")
+    out += [f"{at}: sets {PASSWORD_ENV} from the password it asked for ($... or %s), never to a literal"
+            for value in PASSWORD_SET.findall(code) if not value.startswith(("$", "%s"))]
+    if "--from-literal=" + PASSWORD_ENV in code:
+        out.append(f"{at}: puts no password on a command line (--from-literal); pipe it to --from-env-file=/dev/stdin")
+    if re.search(r"""\bpassword\s*=\s*["']""", code):
+        out.append(f'{at}: writes no password: Alloy reads sys.env("{PASSWORD_ENV}")')
+    if "\r" in code:
+        out.append(f"{at}'s code has no carriage return")
+    return out
+
+
+def heredocs(code):
+    """[(line, quoted, delimiter, body or None when it never ends, its first line)] of code; line counts from 1."""
+    lines, out = code.split("\n"), []
+    for i, line in enumerate(lines):
+        for dash, quote, word in HEREDOC.findall(line):
+            end = next((j for j in range(i + 1, len(lines))
+                        if (lines[j].lstrip("\t") if dash else lines[j]) == word), None)
+            out.append((i + 1, bool(quote), word, None if end is None else "\n".join(lines[i + 1:end]), line))
+    return out
+
+
+def render_step(code, snippet):
+    """The step as the customer copies it, with example values: the snippet first, then what it holds."""
+    code = code.replace("${SNIPPET}", snippet)
+    return PLACEHOLDER.sub(lambda m: STEP_EXAMPLE.get(m.group(1), m.group(0)), code)
+
+
+def bash_problems(at, code):
+    bash = shutil.which("bash")
+    if not bash:
+        return [f"{at}: bash -n could not run: no bash on this machine"]
+    run = subprocess.run([bash, "-n"], input=code, capture_output=True, text=True)
+    return [f"{at}: bash -n: {run.stderr.strip()}"] if run.returncode != 0 or run.stderr.strip() else []
+
+
+def parse_problems(at, step, snippet):
+    """What is wrong with a step once filled: its heredocs, and bash, YAML or a plist taking it."""
+    out = []
+    for n, quoted, word, body, _ in heredocs(step["code"]):
+        if body is None:
+            out.append(f"{at}: heredoc {word} (line {n}) never ends: no line {word}")
+        elif "${SNIPPET}" in body and not quoted:
+            out.append(f"{at}: heredoc {word} (line {n}) holds ${{SNIPPET}}, so its delimiter is quoted, <<'{word}': "
+                       "the shell would expand the snippet's $")
+    rendered = render_step(step["code"], snippet)
+    if step["language"] == "bash":
+        out += bash_problems(at, rendered)
+        for _, _, word, body, line in heredocs(rendered):
+            if body is not None and re.search(r"\bbash\b[^<]*<<", line):
+                out += bash_problems(f"{at}, heredoc {word}", body)
+    if step["language"] == "yaml":
+        try:
+            yaml.safe_load(rendered)
+        except yaml.YAMLError as e:
+            out.append(f"{at}: not YAML: {e}")
+    for _, _, word, body, _ in heredocs(rendered):
+        if word == "PLIST" and body is not None:
+            try:
+                plistlib.loads(body.encode("utf-8"))
+            except Exception as e:  # plistlib raises several kinds
+                out.append(f"{at}: heredoc PLIST is not a property list: {e}")
+    return out
+
+
+def collected_snippets(root):
+    """{id: snippet} of the integrations a platform may embed: listed, with a tile, installed by Alloy."""
+    base = root / "integrations"
+    try:
+        index = yaml.safe_load((base / "index.yaml").read_text(encoding="utf-8"))
+    except (OSError, yaml.YAMLError):
+        return {}  # check() says so
+    out = {}
+    for ident in index if isinstance(index, list) else []:
+        try:
+            doc = yaml.safe_load((base / str(ident) / "integration.yaml").read_text(encoding="utf-8"))
+            text = (base / str(ident) / "alloy.alloy").read_text(encoding="utf-8")
+        except (OSError, yaml.YAMLError):
+            continue
+        if isinstance(doc, dict) and doc.get("install") == "alloy" and not doc.get("hidden"):
+            out[ident] = text
+    return out
+
+
+def platform_problems(rel, doc, folder, snippets, root=ROOT):
+    """What is wrong with one platform.yaml; snippets is collected_snippets()."""
+    if not isinstance(doc, dict):
+        return [f"{rel}: is a mapping"]
+    out = [f"{rel}: has no key {k}" for k in sorted(set(doc) - PLATFORM_KEYS)]
+    out += [f"{rel}: needs {k}" for k in sorted(PLATFORM_KEYS - {"guide"} - set(doc))]
+    if doc.get("id") != folder or not ID.fullmatch(folder):
+        out.append(f"{rel}: id is its folder's name, {folder}, in lower-case letters, digits and _")
+    if not isinstance(doc.get("name"), str) or not 0 < len(doc["name"]) <= 40:
+        out.append(f"{rel}: name is a string of 1 to 40 characters")
+    desc = doc.get("description")
+    if not isinstance(desc, str) or not 0 < len(desc) <= 160 or "\n" in desc.strip():
+        out.append(f"{rel}: description is one line of at most 160 characters")
+    status = doc.get("status")
+    if not isinstance(status, str) or status not in STATUSES:
+        out.append(f"{rel}: status is ready, beta or soon")
+    if "guide" in doc:
+        out += guide_problems(rel, doc["guide"], root)
+
+    collects = doc.get("collects", [])
+    if not isinstance(collects, list) or not all(isinstance(c, str) for c in collects) or len(set(collects)) != len(collects):
+        out.append(f"{rel}: collects is a list of integrations' ids, each once")
+        collects = []
+    for c in collects:
+        if c not in snippets:
+            out.append(f"{rel}: collects {c}, which is no integration with an alloy.alloy")
+            continue
+        out += [f"{rel}: collects {c}, whose snippet has ${{{n}}}, which nobody fills on Connect"
+                for n in sorted(set(PLACEHOLDER.findall(snippets[c])) - SNIPPET_PLACEHOLDERS)]
+
+    steps = doc.get("steps")
+    if not isinstance(steps, list):
+        return out + [f"{rel}: steps is a list"]
+    if status == "soon":
+        if steps:
+            out.append(f"{rel}: a soon platform has no steps yet")
+        if "guide" not in doc:
+            out.append(f"{rel}: a soon platform has a guide, where the customer reads how meanwhile")
+        return out
+    if not steps:
+        return out + [f"{rel}: a {status} platform has at least one step"]
+    snippet = "\n\n".join(snippets[c].rstrip("\n") for c in collects if c in snippets)
+    for i, step in enumerate(steps, 1):
+        found = step_problems(rel, i, step)
+        out += found
+        if not found:
+            out += parse_problems(f"{rel}: step {i}", step, snippet)
+    if not all(isinstance(s, dict) and isinstance(s.get("code"), str) for s in steps):
+        return out
+    code = "\n".join(s["code"] for s in steps)
+    if collects and "${SNIPPET}" not in code:
+        out.append(f"{rel}: collects {', '.join(collects)}, so a step writes ${{SNIPPET}}")
+    if not collects and "${SNIPPET}" in code:
+        out.append(f"{rel}: has ${{SNIPPET}}, so it collects some integration")
+    if collects and not PASSWORD_READ.search(code):
+        out.append(f"{rel}: a step asks for the password, read -rsp ... {PASSWORD_ENV}, which the snippets read")
+    last = steps[-1]
+    if not (str(last.get("title")).startswith("Check")
+            and ("Receiving data" in str(last.get("text")) or "/api/v1/query" in str(last.get("code")))):
+        out.append(f"{rel}: its last step, titled Check ..., says how to tell the data arrived: "
+                   "Connect's Receiving data, or a query of the stack")
+    return out
+
+
+def check_platforms(root):
+    """(problems, number of platforms) of platforms/ under root; a repository without it has none."""
+    base = root / "platforms"
+    if not base.is_dir():
+        return [], 0
+    index_path = base / "index.yaml"
+    if not index_path.is_file():
+        return ["platforms/index.yaml: is missing"], 0
+    try:
+        index = yaml.safe_load(index_path.read_text(encoding="utf-8"))
+    except yaml.YAMLError as e:
+        return [f"platforms/index.yaml: not YAML: {e}"], 0
+    if not isinstance(index, list) or not all(isinstance(i, str) for i in index):
+        return ["platforms/index.yaml: is a list of the platforms' ids"], 0
+    folders = sorted(p.name for p in base.iterdir() if p.is_dir())
+    out = [f"platforms/index.yaml: lists {i} twice" for i in sorted({i for i in index if index.count(i) > 1})]
+    out += [f"platforms/index.yaml: lists {i}, which has no folder" for i in index if i not in folders]
+    out += [f"platforms/{f}/: is not in platforms/index.yaml" for f in folders if f not in index]
+    snippets = collected_snippets(root)
+    for ident in [i for i in dict.fromkeys(index) if i in folders]:
+        rel = f"platforms/{ident}/platform.yaml"
+        path = base / ident / "platform.yaml"
+        if not path.is_file():
+            out.append(f"{rel}: is missing")
+            continue
+        try:
+            doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+        except yaml.YAMLError as e:
+            out.append(f"{rel}: not YAML: {e}")
+            continue
+        out += platform_problems(rel, doc, ident, snippets, root)
+    return out, len(index)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--alloy", help="how to run alloy; {dir} is the snippets' directory, mounted at /snippets")
     args = ap.parse_args()
     out, n = check(ROOT, args.alloy)
+    platforms, p = check_platforms(ROOT)
+    out += platforms
     for line in out:
         print(line)
-    print(f"{n} integrations, {len(out)} problems")
+    print(f"{n} integrations, {p} platforms, {len(out)} problems")
     sys.exit(1 if out else 0)
 
 

@@ -1,0 +1,8 @@
+# Amazon ECS: not yet. Alloy beside the tasks, as a sidecar or a daemon service.
+id: ecs
+name: Amazon ECS
+description: Tasks and services of an ECS cluster, on EC2 or Fargate, through Alloy beside them. Coming soon; Grafana's guide shows the setup.
+status: soon
+guide: https://grafana.com/docs/alloy/latest/collect/ecs-opentelemetry-data/
+collects: []
+steps: []
