@@ -9,28 +9,36 @@ collects: [machines]
 steps:
   - title: Install and start Alloy
     text: >-
-      Run this on the machine, as a user that may use sudo. It adds Grafana's
-      package repository (apt on Debian and Ubuntu, dnf or yum on Red Hat,
-      Amazon Linux and Fedora), installs Alloy as the alloy service, writes
-      its configuration to /etc/alloy/config.alloy and your ingest key's
-      password to /etc/default/alloy, which only root reads, and starts it.
-      Where the script still has the password's placeholder, put your
-      ingest key's password. Run it again to change the configuration or the
-      password.
+      Run this on the machine, as a user that may use sudo, and paste your
+      ingest key's password when it asks: it is not shown, and it goes in no
+      command, so not in your shell's history. It adds Grafana's package
+      repository (apt on Debian and Ubuntu, dnf or yum on Red Hat, Amazon
+      Linux and Fedora), installs Alloy as the alloy service, writes its
+      configuration to /etc/alloy/config.alloy and the password to
+      /etc/default/alloy, which only root reads, and starts it. Run it again
+      to change the configuration or the password; a newer Alloy's default
+      files never replace yours.
     language: bash
     code: |
       sudo bash -s <<'TELOPI'
       set -euo pipefail
 
-      # Grafana's package repository, and Alloy from it.
+      # The password, from the terminal: it goes in no command.
+      read -rsp "Ingest key password: " TELOPI_PASSWORD </dev/tty
+      echo
+
+      # Grafana's package repository, and Alloy from it. bash reads this script
+      # from stdin, so nothing may read stdin or prompt: an upgrade keeps your
+      # changed files and puts the package's new defaults beside them.
       if command -v apt-get >/dev/null; then
-        apt-get update -q
-        apt-get install -yq curl gpg
+        export DEBIAN_FRONTEND=noninteractive
+        apt-get update -q </dev/null
+        apt-get install -yq curl gpg </dev/null
         mkdir -p /etc/apt/keyrings
         curl -fsSL https://apt.grafana.com/gpg.key | gpg --dearmor --yes -o /etc/apt/keyrings/grafana.gpg
         echo "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main" > /etc/apt/sources.list.d/grafana.list
-        apt-get update -q
-        apt-get install -yq alloy
+        apt-get update -q </dev/null
+        apt-get install -yq -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold alloy </dev/null
       elif command -v dnf >/dev/null || command -v yum >/dev/null; then
         cat > /etc/yum.repos.d/grafana.repo <<'REPO'
       [grafana]
@@ -43,7 +51,7 @@ steps:
       sslverify=1
       sslcacert=/etc/pki/tls/certs/ca-bundle.crt
       REPO
-        "$(command -v dnf || command -v yum)" install -y alloy
+        "$(command -v dnf || command -v yum)" install -y alloy </dev/null
       else
         echo "This script knows apt, dnf and yum; the guide shows other systems." >&2
         exit 1
@@ -57,12 +65,13 @@ steps:
       chmod 600 /etc/alloy/config.alloy
 
       # The password: only root reads the file, and systemd hands it to Alloy.
-      install -m 600 -o root -g root /dev/null /etc/default/alloy
-      cat > /etc/default/alloy <<'ENV'
+      touch /etc/default/alloy
+      chmod 600 /etc/default/alloy
+      cat > /etc/default/alloy <<ENV
       CONFIG_FILE="/etc/alloy/config.alloy"
       CUSTOM_ARGS=""
       RESTART_ON_UPGRADE=true
-      TELOPI_PASSWORD='${PASSWORD}'
+      TELOPI_PASSWORD='$TELOPI_PASSWORD'
       ENV
       # The rpm package reads /etc/sysconfig/alloy; this has both read this file too.
       mkdir -p /etc/systemd/system/alloy.service.d
@@ -80,4 +89,4 @@ steps:
     language: bash
     code: |
       systemctl is-active alloy
-      sudo journalctl -u alloy --since "5 minutes ago" --no-pager | grep -iE "level=error|401|403" || echo "No errors in the last five minutes."
+      sudo journalctl -u alloy --since "5 minutes ago" --no-pager | grep -E "level=error|HTTP status 40[13]" || echo "No errors in the last five minutes."

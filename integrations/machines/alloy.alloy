@@ -3,7 +3,11 @@
 // Run one Alloy per machine. The password is your ingest key's, read from
 // the environment variable TELOPI_PASSWORD.
 
-prometheus.exporter.unix "machines" { }
+prometheus.exporter.unix "machines" {
+  // In a container, TELOPI_ROOTFS is where the host's / is mounted, so the
+  // disks are the host's; unset, as on a machine itself, it is /.
+  rootfs_path = coalesce(sys.env("TELOPI_ROOTFS"), "/")
+}
 
 prometheus.scrape "machines" {
   targets         = prometheus.exporter.unix.machines.targets

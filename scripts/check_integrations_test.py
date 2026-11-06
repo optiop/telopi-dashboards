@@ -202,7 +202,9 @@ PLATFORM = {
     "collects": ["redis"],
     "steps": [
         {"title": "Install", "text": "Run it.", "language": "bash",
-         "code": "cat > /etc/alloy/config.alloy <<'ALLOY'\n${SNIPPET}\nALLOY\ncat > /etc/default/alloy <<'ENV'\nTELOPI_PASSWORD='${PASSWORD}'\nENV\n"},
+         "code": "sudo bash -s <<'TELOPI'\nread -rsp 'Password: ' TELOPI_PASSWORD </dev/tty\n"
+                 "cat > /etc/alloy/config.alloy <<'ALLOY'\n${SNIPPET}\nALLOY\n"
+                 "printf \"TELOPI_PASSWORD='%s'\\n\" \"$TELOPI_PASSWORD\" > /etc/default/alloy\nTELOPI\n"},
         {"title": "Check that it arrived", "text": "Connect says Receiving data.", "language": "bash",
          "code": "systemctl is-active alloy\n"},
     ],
@@ -282,7 +284,7 @@ class Platforms(unittest.TestCase):
 
     def test_only_the_placeholders_connect_fills(self):
         found = self.step(code=PLATFORM["steps"][0]["code"] + "x=${HOME}\n", text="Put in ${PASSWORD}.")
-        self.assertIn("platforms/linux/platform.yaml: step 1: ${HOME} is not one of ENVIRONMENT, INGEST_URL, PASSWORD, "
+        self.assertIn("platforms/linux/platform.yaml: step 1: ${HOME} is not one of ENVIRONMENT, INGEST_URL, "
                       "SNIPPET, USERNAME", found)
         self.assertIn("platforms/linux/platform.yaml: step 1's text has no placeholder: only code is filled", found)
 
@@ -302,14 +304,44 @@ class Platforms(unittest.TestCase):
         self.place(dict(PLATFORM, collects=[]))
         self.assertIn(f"{rel}: has ${{SNIPPET}}, so it collects some integration", self.problems())
 
-    def test_the_password_is_never_a_literal_nor_printed(self):
+    def test_the_password_is_asked_for_never_on_a_command_line(self):
         rel = "platforms/linux/platform.yaml"
         found = self.step(code="cat <<'A'\n${SNIPPET}\nA\nTELOPI_PASSWORD=hunter2\necho ${PASSWORD}\n")
-        self.assertIn(f"{rel}: step 1: sets TELOPI_PASSWORD to ${{PASSWORD}}, never to a literal", found)
-        self.assertIn(f"{rel}: step 1: never prints the password", found)
+        self.assertIn(f"{rel}: step 1: sets TELOPI_PASSWORD from the password it asked for ($... or %s), never to a literal", found)
+        self.assertIn(f"{rel}: step 1: has no ${{PASSWORD}}: a step asks for the password, so it is in no command or history", found)
         found = self.step(code="cat <<'A'\n${SNIPPET}\nA\npassword = \"hunter2\"\n")
         self.assertIn(f'{rel}: step 1: writes no password: Alloy reads sys.env("TELOPI_PASSWORD")', found)
-        self.assertIn(f"{rel}: a step sets TELOPI_PASSWORD from ${{PASSWORD}}, which the snippets read", found)
+        self.assertIn(f"{rel}: a step asks for the password, read -rsp ... TELOPI_PASSWORD, which the snippets read", found)
+        found = self.step(code=PLATFORM["steps"][0]["code"] + "kubectl create secret generic a --from-literal=TELOPI_PASSWORD=\"$p\"\n")
+        self.assertIn(f"{rel}: step 1: puts no password on a command line (--from-literal); pipe it to --from-env-file=/dev/stdin", found)
+
+    def test_each_step_parses_once_filled(self):
+        rel = "platforms/linux/platform.yaml: step 1"
+        good = PLATFORM["steps"][0]["code"]
+        cases = [
+            # The outer shell would expand the snippet's $.
+            (good.replace("<<'ALLOY'", "<<ALLOY"),
+             f"{rel}: heredoc ALLOY (line 3) holds ${{SNIPPET}}, so its delimiter is quoted, <<'ALLOY': the shell would expand the snippet's $"),
+            (good.replace("<<'TELOPI'", "<<TELOPI"),
+             f"{rel}: heredoc TELOPI (line 1) holds ${{SNIPPET}}, so its delimiter is quoted, <<'TELOPI': the shell would expand the snippet's $"),
+            (good.replace("\nTELOPI\n", "\n"), f"{rel}: heredoc TELOPI (line 1) never ends: no line TELOPI"),
+            (good + "${SNIPPET}\n", f"{rel}: has ${{SNIPPET}} once at most"),
+            (good.replace("printf", "\rprintf"), "platforms/linux/platform.yaml: step 1's code has no carriage return"),
+        ]
+        for code, want in cases:
+            with self.subTest(want=want):
+                self.assertIn(want, self.step(code=code))
+        # bash -n, of the step and of the script it feeds to bash: an if with no fi.
+        found = self.step(code=good + "if true; then\n")
+        self.assertTrue(any(f.startswith(f"{rel}: bash -n: ") for f in found), found)
+        found = self.step(code=good.replace("read -rsp", "if true; then read -rsp"))
+        self.assertTrue(any(f.startswith(f"{rel}, heredoc TELOPI: bash -n: ") for f in found), found)
+        found = self.step(language="yaml", code="services: [a\n")
+        self.assertTrue(any(f.startswith(f"{rel}: not YAML: ") for f in found), found)
+        plist = "cat > a.plist <<'PLIST'\n<plist version=\"1.0\"><dict><key>a</key></plist>\nPLIST\n"
+        found = self.step(code=good + plist)
+        self.assertTrue(any(f.startswith(f"{rel}: heredoc PLIST is not a property list: ") for f in found), found)
+        self.assertEqual(self.step(code=good + plist.replace("</dict>", "").replace("<key>a</key>", "<key>a</key><true/></dict>")), [])
 
     def test_a_list_or_a_map_where_a_string_goes_is_a_problem_not_a_traceback(self):
         for key, value in [("name", ["Linux"]), ("status", {"ready": 1}), ("collects", [["redis"]]),

@@ -25,6 +25,11 @@ The **Machines** dashboard shows one row per machine and graphs over time.
 - The environment's name, for `ENVIRONMENT`, so the dashboard and the alerts
   can tell your environments apart.
 
+- Alloy in a container (Telopi's Docker steps do this): the host's `/`
+  mounted read-only, such as at `/host/root`, and `TELOPI_ROOTFS` set to
+  where, or the disks it reports are the container's. On the machine itself,
+  leave `TELOPI_ROOTFS` unset.
+
 Add the snippet to Alloy's configuration (`/etc/alloy/config.alloy`) and
 restart Alloy. The machine shows on the dashboard within two minutes.
 

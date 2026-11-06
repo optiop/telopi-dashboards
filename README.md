@@ -194,7 +194,7 @@ settings:                   # optional: the snippet's own ${NAME} placeholders, 
   - name: REDIS_ADDRESS
     description: Where Redis listens, host and port.
     example: localhost:6379
-env:                        # optional: secrets the snippet reads with sys.env("NAME"), besides TELOPI_PASSWORD
+env:                        # optional: what the snippet reads with sys.env("NAME"), besides TELOPI_PASSWORD: a secret, or where a container mounts the host
   - name: REDIS_PASSWORD
     description: The password of a Redis user that may run INFO.
 ```
@@ -313,12 +313,16 @@ Only a step's `code` is filled, and only with these:
 | `${INGEST_URL}` | Telopi's API: the stack's ingest address, in the code and in the snippets it embeds |
 | `${USERNAME}` | The portal: the username of the ingest key the customer picks |
 | `${ENVIRONMENT}` | The portal: the environment's name the customer types |
-| `${PASSWORD}` | The portal, or the customer: the ingest key's password |
 
-- **The password is never a literal and never printed.** The snippets read
-  it with `sys.env("TELOPI_PASSWORD")`; a step sets `TELOPI_PASSWORD` to
-  `${PASSWORD}` in a file only root or the customer reads (mode 600), a
-  Kubernetes Secret or a Compose `.env`, and never echoes it.
+- **The password is asked for, never pasted in a command.** The snippets read
+  it with `sys.env("TELOPI_PASSWORD")`. A step asks for it with
+  `read -rsp ... TELOPI_PASSWORD </dev/tty` inside a quoted heredoc fed to
+  `bash` (so it works from zsh, and the rest of a pasted step is not read as
+  the password), and writes it with `printf` or a heredoc, never on a command
+  line, to a file only root or the customer reads (mode 600), a Kubernetes
+  Secret (`--from-env-file=/dev/stdin`) or a Compose `.env`. So the password
+  is in no shell history and no process list, and `${PASSWORD}`, a literal
+  or `--from-literal` never appears in a step.
 - **A snippet a platform embeds** uses only `${INGEST_URL}`, `${USERNAME}`
   and `${ENVIRONMENT}`: Connect asks for nothing else.
 - **The last step tells whether the data arrived**: its title starts with
@@ -326,14 +330,18 @@ Only a step's `code` is filled, and only with these:
   check, which the portal runs) or queries the stack. Ingest keys cannot
   read (ADR-0038), so a step's own `curl` checks the agent's status, not the
   stack.
-- **Try it by hand** on the platform before it is `ready`: CI checks the
-  steps' shape, not that they run.
+- **Try it by hand** on the platform before it is `ready`: CI parses the
+  steps, it does not run them.
 
 `scripts/check_integrations.py` checks the platforms too: each field above,
 that the index lists each folder once, that `collects` names integrations
-with a snippet, the placeholders, the snippet's line, the password rules,
-that a `ready` or `beta` platform has steps ending in a check and that a
-`soon` one has none and has a guide.
+with a snippet, the placeholders, the snippet's line (at most one per step),
+the password rules, that a `ready` or `beta` platform has steps ending in a
+check and that a `soon` one has none and has a guide. It also fills each step
+with example values and parses it: `bash -n` for `bash` (and for each
+heredoc fed to `bash`), YAML for `yaml`, each `<<'PLIST'` as a property list;
+a heredoc holding `${SNIPPET}` has a quoted delimiter and an end, and no code
+has a carriage return.
 
 ## Checks
 

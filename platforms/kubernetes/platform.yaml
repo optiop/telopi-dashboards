@@ -27,14 +27,18 @@ steps:
       helm upgrade --install kube-state-metrics prometheus-community/kube-state-metrics --namespace telopi
   - title: Put the password in a Secret
     text: >-
-      Alloy reads your ingest key's password from this Secret. Where the
-      command still has the password's placeholder, put your ingest key's
-      password.
+      Alloy reads your ingest key's password from this Secret. Paste the
+      password when this asks: it is not shown, and it goes in no command, so
+      not in your shell's history.
     language: bash
     code: |
-      kubectl --namespace telopi create secret generic telopi-alloy \
-        --from-literal=TELOPI_PASSWORD='${PASSWORD}' \
-        --dry-run=client -o yaml | kubectl apply -f -
+      bash <<'TELOPI'
+      read -rsp "Ingest key password: " TELOPI_PASSWORD </dev/tty
+      echo
+      printf 'TELOPI_PASSWORD=%s\n' "$TELOPI_PASSWORD" |
+        kubectl --namespace telopi create secret generic telopi-alloy --from-env-file=/dev/stdin \
+          --dry-run=client -o yaml | kubectl apply -f -
+      TELOPI
   - title: Write Alloy's configuration
     text: Alloy's configuration has no secret; it goes in a ConfigMap.
     language: bash
@@ -46,11 +50,16 @@ steps:
         --dry-run=client -o yaml | kubectl apply -f -
   - title: Install Alloy
     text: >-
-      One Alloy for the whole cluster: it reaches each node's kubelet through
-      the API server, with the read access to nodes its chart gives it. It
-      reloads the ConfigMap when it changes.
+      One Alloy for the whole cluster: it reaches each node's kubelet and
+      cAdvisor through the API server's proxy, so its service account also
+      gets nodes/proxy, which the chart does not give. It reloads the
+      ConfigMap when it changes.
     language: bash
     code: |
+      kubectl create clusterrole telopi-alloy-kubelet --verb=get --resource=nodes/proxy \
+        --dry-run=client -o yaml | kubectl apply -f -
+      kubectl create clusterrolebinding telopi-alloy-kubelet --clusterrole=telopi-alloy-kubelet \
+        --serviceaccount=telopi:alloy --dry-run=client -o yaml | kubectl apply -f -
       helm upgrade --install alloy grafana/alloy --namespace telopi \
         --set controller.type=deployment \
         --set controller.replicas=1 \
@@ -66,4 +75,4 @@ steps:
     language: bash
     code: |
       kubectl --namespace telopi rollout status deployment/alloy
-      kubectl --namespace telopi logs deployment/alloy -c alloy --since=5m | grep -iE "level=error|401|403" || echo "No errors in the last five minutes."
+      kubectl --namespace telopi logs deployment/alloy -c alloy --since=5m | grep -E "level=error|HTTP status 40[13]" || echo "No errors in the last five minutes."

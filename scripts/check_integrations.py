@@ -10,8 +10,10 @@
 import argparse
 import json
 import pathlib
+import plistlib
 import re
 import shlex
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -284,11 +286,18 @@ STATUSES = {"ready", "beta", "soon"}
 LANGUAGES = {"bash", "yaml", "shell", "text", "alloy"}
 PLATFORM_KEYS = {"id", "name", "description", "status", "guide", "collects", "steps"}
 STEP_KEYS = {"title", "text", "language", "code"}
-# What a step's code may hold: the API fills SNIPPET and INGEST_URL, the portal the rest.
-STEP_PLACEHOLDERS = {"INGEST_URL", "USERNAME", "PASSWORD", "ENVIRONMENT", "SNIPPET"}
+# What a step's code may hold: the API fills SNIPPET and INGEST_URL, the portal the rest. Never
+# PASSWORD: a step asks for the password, so it is in no command and no shell history.
+STEP_PLACEHOLDERS = {"INGEST_URL", "USERNAME", "ENVIRONMENT", "SNIPPET"}
 # What an embedded snippet may hold: what the API and the portal fill, nothing the customer must.
 SNIPPET_PLACEHOLDERS = {"INGEST_URL", "USERNAME", "ENVIRONMENT"}
-# The password variable set to a value, as VAR=x or VAR: x.
+# How a step asks for the password: read without echo, into TELOPI_PASSWORD.
+PASSWORD_READ = re.compile(r"\bread\s+-[a-z]*s[a-z]*\b.*\b" + PASSWORD_ENV + r"\b")
+# A heredoc's start: <<WORD, <<'WORD', <<"WORD" or <<-WORD; not a here-string (<<<).
+HEREDOC = re.compile(r"""(?<!<)<<(-?)\s*(['"]?)([A-Za-z_][A-Za-z0-9_]*)\2""")
+# What a step is parsed with: example values where the API and the portal fill it.
+STEP_EXAMPLE = dict(EXAMPLE, ENVIRONMENT="production")
+# The password variable set to a value, as VAR=x or VAR: x; only a variable ($x) or printf's %s may follow.
 PASSWORD_SET = re.compile(PASSWORD_ENV + r"""\s*[=:]\s*['"]?([^'"\s]*)""")
 GUIDE_URL = re.compile(r"""https://[^\s"'<>]+""")
 GUIDE_PATH = re.compile(r"[A-Za-z0-9_.-]+(/[A-Za-z0-9_.-]+)*")
@@ -314,17 +323,78 @@ def step_problems(rel, i, step):
         out.append(f"{at}'s language is one of {', '.join(sorted(LANGUAGES))}")
     out += [f"{at}'s {k} has no placeholder: only code is filled" for k in ("title", "text") if PLACEHOLDER.search(step[k])]
     code = step["code"]
+    used = set(PLACEHOLDER.findall(code))
+    if "PASSWORD" in used:
+        out.append(f"{at}: has no ${{PASSWORD}}: a step asks for the password, so it is in no command or history")
     out += [f"{at}: ${{{n}}} is not one of {', '.join(sorted(STEP_PLACEHOLDERS))}"
-            for n in sorted(set(PLACEHOLDER.findall(code)) - STEP_PLACEHOLDERS)]
+            for n in sorted(used - STEP_PLACEHOLDERS - {"PASSWORD"})]
     for line in code.splitlines():
         if "${SNIPPET}" in line and line != "${SNIPPET}":
             out.append(f"{at}: ${{SNIPPET}} is a line of its own, unindented, so the snippet goes in as it is")
-        if "${PASSWORD}" in line and re.search(r"\b(echo|printf)\b", line):
-            out.append(f"{at}: never prints the password")
-    out += [f"{at}: sets {PASSWORD_ENV} to ${{PASSWORD}}, never to a literal"
-            for value in PASSWORD_SET.findall(code) if value != "${PASSWORD}"]
+    if code.count("${SNIPPET}") > 1:
+        out.append(f"{at}: has ${{SNIPPET}} once at most")
+    out += [f"{at}: sets {PASSWORD_ENV} from the password it asked for ($... or %s), never to a literal"
+            for value in PASSWORD_SET.findall(code) if not value.startswith(("$", "%s"))]
+    if "--from-literal=" + PASSWORD_ENV in code:
+        out.append(f"{at}: puts no password on a command line (--from-literal); pipe it to --from-env-file=/dev/stdin")
     if re.search(r"""\bpassword\s*=\s*["']""", code):
         out.append(f'{at}: writes no password: Alloy reads sys.env("{PASSWORD_ENV}")')
+    if "\r" in code:
+        out.append(f"{at}'s code has no carriage return")
+    return out
+
+
+def heredocs(code):
+    """[(line, quoted, delimiter, body or None when it never ends, its first line)] of code; line counts from 1."""
+    lines, out = code.split("\n"), []
+    for i, line in enumerate(lines):
+        for dash, quote, word in HEREDOC.findall(line):
+            end = next((j for j in range(i + 1, len(lines))
+                        if (lines[j].lstrip("\t") if dash else lines[j]) == word), None)
+            out.append((i + 1, bool(quote), word, None if end is None else "\n".join(lines[i + 1:end]), line))
+    return out
+
+
+def render_step(code, snippet):
+    """The step as the customer copies it, with example values: the snippet first, then what it holds."""
+    code = code.replace("${SNIPPET}", snippet)
+    return PLACEHOLDER.sub(lambda m: STEP_EXAMPLE.get(m.group(1), m.group(0)), code)
+
+
+def bash_problems(at, code):
+    bash = shutil.which("bash")
+    if not bash:
+        return [f"{at}: bash -n could not run: no bash on this machine"]
+    run = subprocess.run([bash, "-n"], input=code, capture_output=True, text=True)
+    return [f"{at}: bash -n: {run.stderr.strip()}"] if run.returncode != 0 or run.stderr.strip() else []
+
+
+def parse_problems(at, step, snippet):
+    """What is wrong with a step once filled: its heredocs, and bash, YAML or a plist taking it."""
+    out = []
+    for n, quoted, word, body, _ in heredocs(step["code"]):
+        if body is None:
+            out.append(f"{at}: heredoc {word} (line {n}) never ends: no line {word}")
+        elif "${SNIPPET}" in body and not quoted:
+            out.append(f"{at}: heredoc {word} (line {n}) holds ${{SNIPPET}}, so its delimiter is quoted, <<'{word}': "
+                       "the shell would expand the snippet's $")
+    rendered = render_step(step["code"], snippet)
+    if step["language"] == "bash":
+        out += bash_problems(at, rendered)
+        for _, _, word, body, line in heredocs(rendered):
+            if body is not None and re.search(r"\bbash\b[^<]*<<", line):
+                out += bash_problems(f"{at}, heredoc {word}", body)
+    if step["language"] == "yaml":
+        try:
+            yaml.safe_load(rendered)
+        except yaml.YAMLError as e:
+            out.append(f"{at}: not YAML: {e}")
+    for _, _, word, body, _ in heredocs(rendered):
+        if word == "PLIST" and body is not None:
+            try:
+                plistlib.loads(body.encode("utf-8"))
+            except Exception as e:  # plistlib raises several kinds
+                out.append(f"{at}: heredoc PLIST is not a property list: {e}")
     return out
 
 
@@ -388,8 +458,12 @@ def platform_problems(rel, doc, folder, snippets, root=ROOT):
         return out
     if not steps:
         return out + [f"{rel}: a {status} platform has at least one step"]
+    snippet = "\n\n".join(snippets[c].rstrip("\n") for c in collects if c in snippets)
     for i, step in enumerate(steps, 1):
-        out += step_problems(rel, i, step)
+        found = step_problems(rel, i, step)
+        out += found
+        if not found:
+            out += parse_problems(f"{rel}: step {i}", step, snippet)
     if not all(isinstance(s, dict) and isinstance(s.get("code"), str) for s in steps):
         return out
     code = "\n".join(s["code"] for s in steps)
@@ -397,8 +471,8 @@ def platform_problems(rel, doc, folder, snippets, root=ROOT):
         out.append(f"{rel}: collects {', '.join(collects)}, so a step writes ${{SNIPPET}}")
     if not collects and "${SNIPPET}" in code:
         out.append(f"{rel}: has ${{SNIPPET}}, so it collects some integration")
-    if collects and "${PASSWORD}" not in code:
-        out.append(f"{rel}: a step sets {PASSWORD_ENV} from ${{PASSWORD}}, which the snippets read")
+    if collects and not PASSWORD_READ.search(code):
+        out.append(f"{rel}: a step asks for the password, read -rsp ... {PASSWORD_ENV}, which the snippets read")
     last = steps[-1]
     if not (str(last.get("title")).startswith("Check")
             and ("Receiving data" in str(last.get("text")) or "/api/v1/query" in str(last.get("code")))):
