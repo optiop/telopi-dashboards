@@ -1,0 +1,69 @@
+# Kubernetes: kube-state-metrics and one Alloy from their Helm charts, in the
+# namespace telopi, with the Kubernetes snippet as Alloy's configuration and
+# the password in a Secret.
+id: kubernetes
+name: Kubernetes
+description: Any Kubernetes cluster, EKS, GKE, AKS or your own. Helm installs kube-state-metrics and one Alloy that sends its nodes, pods and workloads.
+status: ready
+guide: integrations/kubernetes/README.md
+collects: [kubernetes]
+steps:
+  - title: Add the Helm charts
+    text: >-
+      On a machine with kubectl and Helm pointed at the cluster, add the
+      charts of kube-state-metrics and Alloy.
+    language: bash
+    code: |
+      helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+      helm repo add grafana https://grafana.github.io/helm-charts
+      helm repo update
+  - title: Install kube-state-metrics
+    text: >-
+      kube-state-metrics turns the cluster's objects (pods, workloads, jobs,
+      nodes) into metrics. It goes in the namespace telopi, with Alloy.
+    language: bash
+    code: |
+      kubectl create namespace telopi --dry-run=client -o yaml | kubectl apply -f -
+      helm upgrade --install kube-state-metrics prometheus-community/kube-state-metrics --namespace telopi
+  - title: Put the password in a Secret
+    text: >-
+      Alloy reads your ingest key's password from this Secret. Where the
+      command still has the password's placeholder, put your ingest key's
+      password.
+    language: bash
+    code: |
+      kubectl --namespace telopi create secret generic telopi-alloy \
+        --from-literal=TELOPI_PASSWORD='${PASSWORD}' \
+        --dry-run=client -o yaml | kubectl apply -f -
+  - title: Write Alloy's configuration
+    text: Alloy's configuration has no secret; it goes in a ConfigMap.
+    language: bash
+    code: |
+      cat > config.alloy <<'ALLOY'
+      ${SNIPPET}
+      ALLOY
+      kubectl --namespace telopi create configmap telopi-alloy --from-file=config.alloy \
+        --dry-run=client -o yaml | kubectl apply -f -
+  - title: Install Alloy
+    text: >-
+      One Alloy for the whole cluster: it reaches each node's kubelet through
+      the API server, with the read access to nodes its chart gives it. It
+      reloads the ConfigMap when it changes.
+    language: bash
+    code: |
+      helm upgrade --install alloy grafana/alloy --namespace telopi \
+        --set controller.type=deployment \
+        --set controller.replicas=1 \
+        --set alloy.configMap.create=false \
+        --set alloy.configMap.name=telopi-alloy \
+        --set alloy.configMap.key=config.alloy \
+        --set 'alloy.envFrom[0].secretRef.name=telopi-alloy'
+  - title: Check that it arrived
+    text: >-
+      Alloy should be rolled out and log no error. Within two minutes Connect
+      in the portal says Receiving data, and the Kubernetes dashboards in your
+      Grafana fill. A 401 in the log is a wrong username or password.
+    language: bash
+    code: |
+      kubectl --namespace telopi rollout status deployment/alloy
+      kubectl --namespace telopi logs deployment/alloy -c alloy --since=5m | grep -iE "level=error|401|403" || echo "No errors in the last five minutes."

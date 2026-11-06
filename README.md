@@ -274,6 +274,67 @@ the snippet's placeholders, environment variables and labels, and, given
 `--alloy`, that `alloy fmt` parses the snippet and `alloy validate` takes it
 with each placeholder at its example.
 
+## Platforms
+
+[`platforms/`](platforms) is what the Telopi portal's **Connect** page shows
+(Telopi's ADR-0065): one tile per place the agent runs (Kubernetes, a Linux
+machine, Docker, a Mac), each opening its own steps to copy. The platform
+reads it with the integrations, from `main`, so a tile or a fixed step ships
+with its merge. A platform is a folder `platforms/<id>/` with one file,
+`platform.yaml`, listed in [`platforms/index.yaml`](platforms/index.yaml) in
+the order Connect shows the tiles.
+
+```yaml
+id: linux                     # the folder's name: lower-case letters, digits and _
+name: Linux, EC2 or bare metal  # what the tile says, at most 40 characters
+description: Any Linux machine or VM.   # one line, at most 160 characters
+status: ready                 # ready, beta (works, less tried; the tile says so) or soon (no steps yet)
+guide: integrations/machines/README.md  # a file of this repository or an https URL; required for soon
+collects: [machines]          # the integrations whose alloy.alloy the steps embed
+steps:                        # none for soon
+  - title: Install and start Alloy
+    text: Run this on the machine, as a user that may use sudo.
+    language: bash            # bash, shell, yaml, alloy or text
+    code: |
+      cat > /etc/alloy/config.alloy <<'ALLOY'
+      ${SNIPPET}
+      ALLOY
+  - title: Check that it arrived
+    text: Within two minutes Connect in the portal says Receiving data.
+    language: bash
+    code: systemctl is-active alloy
+```
+
+Only a step's `code` is filled, and only with these:
+
+| Placeholder | Filled by |
+| --- | --- |
+| `${SNIPPET}` | Telopi's API: the `alloy.alloy` of each integration in `collects`, in order. A line of its own, unindented, so the snippet goes in as it is (write it to a file with a quoted heredoc, `<<'ALLOY'`, then point Alloy, a ConfigMap or a volume at the file) |
+| `${INGEST_URL}` | Telopi's API: the stack's ingest address, in the code and in the snippets it embeds |
+| `${USERNAME}` | The portal: the username of the ingest key the customer picks |
+| `${ENVIRONMENT}` | The portal: the environment's name the customer types |
+| `${PASSWORD}` | The portal, or the customer: the ingest key's password |
+
+- **The password is never a literal and never printed.** The snippets read
+  it with `sys.env("TELOPI_PASSWORD")`; a step sets `TELOPI_PASSWORD` to
+  `${PASSWORD}` in a file only root or the customer reads (mode 600), a
+  Kubernetes Secret or a Compose `.env`, and never echoes it.
+- **A snippet a platform embeds** uses only `${INGEST_URL}`, `${USERNAME}`
+  and `${ENVIRONMENT}`: Connect asks for nothing else.
+- **The last step tells whether the data arrived**: its title starts with
+  *Check*, and it points at Connect's *Receiving data* (the integration's
+  check, which the portal runs) or queries the stack. Ingest keys cannot
+  read (ADR-0038), so a step's own `curl` checks the agent's status, not the
+  stack.
+- **Try it by hand** on the platform before it is `ready`: CI checks the
+  steps' shape, not that they run.
+
+`scripts/check_integrations.py` checks the platforms too: each field above,
+that the index lists each folder once, that `collects` names integrations
+with a snippet, the placeholders, the snippet's line, the password rules,
+that a `ready` or `beta` platform has steps ending in a check and that a
+`soon` one has none and has a guide.
+
 ## Checks
 
 ```sh
@@ -295,7 +356,7 @@ python3 scripts/check_alerts.py --loki http://127.0.0.1:3100 \
   --promtool "docker run --rm -v {dir}:/rules --entrypoint promtool prom/prometheus:v3.5.0"
 docker rm -f loki-check
 
-# The integrations, and Alloy takes each snippet.
+# The integrations and the platforms, and Alloy takes each snippet.
 python3 scripts/check_integrations_test.py    # the integration check's own tests (needs PyYAML)
 python3 scripts/check_integrations.py \
   --alloy "docker run --rm -v {dir}:/snippets grafana/alloy:v1.20.0"

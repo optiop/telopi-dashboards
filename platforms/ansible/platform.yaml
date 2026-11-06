@@ -1,0 +1,9 @@
+# Ansible: not yet. Grafana's grafana.grafana collection installs Alloy on
+# many machines at once; the Linux steps do it on one.
+id: ansible
+name: Ansible
+description: Alloy on many Linux machines at once with Grafana's Ansible collection. Coming soon; until then, the Linux steps on each machine.
+status: soon
+guide: https://grafana.com/docs/alloy/latest/set-up/install/ansible/
+collects: []
+steps: []

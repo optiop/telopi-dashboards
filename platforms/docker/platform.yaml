@@ -1,0 +1,66 @@
+# Docker or Docker Compose: Alloy's image beside the customer's containers,
+# with the Machines snippet as its configuration, on the host's network and
+# process namespace so the machine it reports is the host.
+id: docker
+name: Docker or Docker Compose
+description: A Linux host that runs Docker. A compose.yaml runs Alloy beside your containers and sends the host's CPU, memory, disks and network.
+status: ready
+guide: integrations/machines/README.md
+collects: [machines]
+steps:
+  - title: Write Alloy's configuration
+    text: >-
+      In a new folder on the Docker host, write Alloy's configuration. It has
+      no secret.
+    language: bash
+    code: |
+      mkdir -p telopi-alloy && cd telopi-alloy
+      cat > config.alloy <<'ALLOY'
+      ${SNIPPET}
+      ALLOY
+  - title: Put the password in .env
+    text: >-
+      In the same folder, write your ingest key's password to .env, which
+      only you read. Where the command still has the password's placeholder,
+      put your ingest key's password.
+    language: bash
+    code: |
+      install -m 600 /dev/null .env
+      cat > .env <<'ENV'
+      TELOPI_PASSWORD='${PASSWORD}'
+      ENV
+  - title: Add compose.yaml
+    text: >-
+      Save this as compose.yaml in the same folder. Alloy shares the host's
+      network and processes, so the metrics are the host's, not the
+      container's.
+    language: yaml
+    code: |
+      services:
+        alloy:
+          image: grafana/alloy:v1.20.0
+          restart: unless-stopped
+          command: run --storage.path=/var/lib/alloy/data /etc/alloy/config.alloy
+          env_file: .env
+          network_mode: host
+          pid: host
+          volumes:
+            - ./config.alloy:/etc/alloy/config.alloy:ro
+            - alloy-data:/var/lib/alloy/data
+
+      volumes:
+        alloy-data:
+  - title: Start it
+    text: Start Alloy in the background; Docker starts it again after a restart.
+    language: bash
+    code: |
+      docker compose up -d
+      docker compose ps alloy
+  - title: Check that it arrived
+    text: >-
+      Alloy should be running and log no error. Within two minutes Connect in
+      the portal says Receiving data, and the Machines dashboard in your
+      Grafana fills. A 401 in the log is a wrong username or password.
+    language: bash
+    code: |
+      docker compose logs --since 5m alloy | grep -iE "level=error|401|403" || echo "No errors in the last five minutes."

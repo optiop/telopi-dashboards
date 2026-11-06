@@ -1,0 +1,83 @@
+# Linux, EC2 or bare metal: Alloy from Grafana's apt or rpm repository as a
+# systemd service, with the Machines snippet as its configuration.
+id: linux
+name: Linux, EC2 or bare metal
+description: Any Linux machine or VM, an EC2 instance included. One script installs Alloy as a service and sends the machine's CPU, memory, disks and network.
+status: ready
+guide: integrations/machines/README.md
+collects: [machines]
+steps:
+  - title: Install and start Alloy
+    text: >-
+      Run this on the machine, as a user that may use sudo. It adds Grafana's
+      package repository (apt on Debian and Ubuntu, dnf or yum on Red Hat,
+      Amazon Linux and Fedora), installs Alloy as the alloy service, writes
+      its configuration to /etc/alloy/config.alloy and your ingest key's
+      password to /etc/default/alloy, which only root reads, and starts it.
+      Where the script still has the password's placeholder, put your
+      ingest key's password. Run it again to change the configuration or the
+      password.
+    language: bash
+    code: |
+      sudo bash -s <<'TELOPI'
+      set -euo pipefail
+
+      # Grafana's package repository, and Alloy from it.
+      if command -v apt-get >/dev/null; then
+        apt-get update -q
+        apt-get install -yq curl gpg
+        mkdir -p /etc/apt/keyrings
+        curl -fsSL https://apt.grafana.com/gpg.key | gpg --dearmor --yes -o /etc/apt/keyrings/grafana.gpg
+        echo "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main" > /etc/apt/sources.list.d/grafana.list
+        apt-get update -q
+        apt-get install -yq alloy
+      elif command -v dnf >/dev/null || command -v yum >/dev/null; then
+        cat > /etc/yum.repos.d/grafana.repo <<'REPO'
+      [grafana]
+      name=grafana
+      baseurl=https://rpm.grafana.com
+      repo_gpgcheck=1
+      enabled=1
+      gpgcheck=1
+      gpgkey=https://rpm.grafana.com/gpg.key
+      sslverify=1
+      sslcacert=/etc/pki/tls/certs/ca-bundle.crt
+      REPO
+        "$(command -v dnf || command -v yum)" install -y alloy
+      else
+        echo "This script knows apt, dnf and yum; the guide shows other systems." >&2
+        exit 1
+      fi
+
+      # The configuration has no secret; only Alloy reads it.
+      cat > /etc/alloy/config.alloy <<'ALLOY'
+      ${SNIPPET}
+      ALLOY
+      chown alloy:alloy /etc/alloy/config.alloy
+      chmod 600 /etc/alloy/config.alloy
+
+      # The password: only root reads the file, and systemd hands it to Alloy.
+      install -m 600 -o root -g root /dev/null /etc/default/alloy
+      cat > /etc/default/alloy <<'ENV'
+      CONFIG_FILE="/etc/alloy/config.alloy"
+      CUSTOM_ARGS=""
+      RESTART_ON_UPGRADE=true
+      TELOPI_PASSWORD='${PASSWORD}'
+      ENV
+      # The rpm package reads /etc/sysconfig/alloy; this has both read this file too.
+      mkdir -p /etc/systemd/system/alloy.service.d
+      printf '[Service]\nEnvironmentFile=/etc/default/alloy\n' > /etc/systemd/system/alloy.service.d/telopi.conf
+
+      systemctl daemon-reload
+      systemctl enable alloy
+      systemctl restart alloy
+      TELOPI
+  - title: Check that it arrived
+    text: >-
+      Alloy should be active and log no error. Within two minutes Connect in
+      the portal says Receiving data, and the Machines dashboard in your
+      Grafana fills. A 401 in the log is a wrong username or password.
+    language: bash
+    code: |
+      systemctl is-active alloy
+      sudo journalctl -u alloy --since "5 minutes ago" --no-pager | grep -iE "level=error|401|403" || echo "No errors in the last five minutes."

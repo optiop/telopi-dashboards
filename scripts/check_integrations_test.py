@@ -193,5 +193,135 @@ class Catalog(unittest.TestCase):
         self.assertEqual(ci.check(ci.ROOT)[0], [])
 
 
+PLATFORM = {
+    "id": "linux",
+    "name": "Linux",
+    "description": "Any Linux machine.",
+    "status": "ready",
+    "guide": "integrations/redis/README.md",
+    "collects": ["redis"],
+    "steps": [
+        {"title": "Install", "text": "Run it.", "language": "bash",
+         "code": "cat > /etc/alloy/config.alloy <<'ALLOY'\n${SNIPPET}\nALLOY\ncat > /etc/default/alloy <<'ENV'\nTELOPI_PASSWORD='${PASSWORD}'\nENV\n"},
+        {"title": "Check that it arrived", "text": "Connect says Receiving data.", "language": "bash",
+         "code": "systemctl is-active alloy\n"},
+    ],
+}
+SOON = {"id": "linux", "name": "Linux", "description": "Soon.", "status": "soon",
+        "guide": "https://grafana.com/docs/alloy/latest/", "collects": [], "steps": []}
+
+
+class Platforms(unittest.TestCase):
+    """Catalog's repository, its redis snippet without a setting, and one platform, linux, that collects it."""
+
+    write = Catalog.write
+
+    def setUp(self):
+        Catalog.setUp(self)
+        self.write({k: v for k, v in MANIFEST.items() if k != "settings"}, SNIPPET.replace('\n  redis_addr = "${REDIS_ADDRESS}"', ""))
+        self.platform = self.root / "platforms" / "linux"
+        self.platform.mkdir(parents=True)
+        self.place(PLATFORM, ["linux"])
+
+    def place(self, platform, index=None):
+        (self.platform / "platform.yaml").write_text(yaml.safe_dump(platform))
+        if index is not None:
+            (self.root / "platforms" / "index.yaml").write_text(yaml.safe_dump(index))
+
+    def problems(self):
+        return ci.check_platforms(self.root)[0]
+
+    def step(self, **change):
+        steps = [dict(PLATFORM["steps"][0], **change), PLATFORM["steps"][1]]
+        self.place(dict(PLATFORM, steps=steps))
+        return self.problems()
+
+    def test_a_good_platform_has_no_problems(self):
+        self.assertEqual(self.problems(), [])
+        self.place(SOON)
+        self.assertEqual(self.problems(), [])
+
+    def test_a_repository_without_platforms_has_none(self):
+        shutil.rmtree(self.root / "platforms")
+        self.assertEqual(ci.check_platforms(self.root), ([], 0))
+
+    def test_the_index_names_each_folder_once(self):
+        self.place(PLATFORM, ["linux", "linux", "macos"])
+        found = self.problems()
+        self.assertIn("platforms/index.yaml: lists linux twice", found)
+        self.assertIn("platforms/index.yaml: lists macos, which has no folder", found)
+        self.place(PLATFORM, [])
+        self.assertIn("platforms/linux/: is not in platforms/index.yaml", self.problems())
+
+    def test_the_manifests_fields(self):
+        self.place(dict(PLATFORM, id="Linux", name="L" * 41, status="done", colour="red", guide="../secrets"))
+        rel = "platforms/linux/platform.yaml"
+        found = self.problems()
+        for want in [f"{rel}: id is its folder's name, linux, in lower-case letters, digits and _",
+                     f"{rel}: name is a string of 1 to 40 characters", f"{rel}: status is ready, beta or soon",
+                     f"{rel}: has no key colour", f"{rel}: guide is a file of this repository or an https URL"]:
+            self.assertIn(want, found)
+        self.place(dict(PLATFORM, guide="http://example.com"))
+        self.assertIn(f"{rel}: guide is a file of this repository or an https URL", self.problems())
+
+    def test_soon_has_a_guide_and_no_steps(self):
+        rel = "platforms/linux/platform.yaml"
+        self.place(dict(SOON, steps=PLATFORM["steps"]))
+        self.assertIn(f"{rel}: a soon platform has no steps yet", self.problems())
+        self.place({k: v for k, v in SOON.items() if k != "guide"})
+        self.assertIn(f"{rel}: a soon platform has a guide, where the customer reads how meanwhile", self.problems())
+        self.place(dict(PLATFORM, steps=[]))
+        self.assertIn(f"{rel}: a ready platform has at least one step", self.problems())
+
+    def test_the_last_step_says_whether_it_arrived(self):
+        self.place(dict(PLATFORM, steps=PLATFORM["steps"][:1]))
+        self.assertTrue(any("its last step, titled Check" in f for f in self.problems()))
+        query = dict(PLATFORM["steps"][1], text="Ask the stack.", code="curl ${INGEST_URL}/mimir/prometheus/api/v1/query\n")
+        self.place(dict(PLATFORM, steps=[PLATFORM["steps"][0], query]))
+        self.assertEqual(self.problems(), [])
+
+    def test_only_the_placeholders_connect_fills(self):
+        found = self.step(code=PLATFORM["steps"][0]["code"] + "x=${HOME}\n", text="Put in ${PASSWORD}.")
+        self.assertIn("platforms/linux/platform.yaml: step 1: ${HOME} is not one of ENVIRONMENT, INGEST_URL, PASSWORD, "
+                      "SNIPPET, USERNAME", found)
+        self.assertIn("platforms/linux/platform.yaml: step 1's text has no placeholder: only code is filled", found)
+
+    def test_the_snippet_is_a_line_of_its_own(self):
+        found = self.step(code=PLATFORM["steps"][0]["code"].replace("\n${SNIPPET}", "\n  ${SNIPPET}"))
+        self.assertIn("platforms/linux/platform.yaml: step 1: ${SNIPPET} is a line of its own, unindented, so the "
+                      "snippet goes in as it is", found)
+
+    def test_collects_names_an_alloy_integration_whose_placeholders_connect_fills(self):
+        rel = "platforms/linux/platform.yaml"
+        self.place(dict(PLATFORM, collects=["redis", "kafka"]))
+        self.assertIn(f"{rel}: collects kafka, which is no integration with an alloy.alloy", self.problems())
+        self.write(MANIFEST, SNIPPET)  # its setting, which only the Integrations page asks for
+        self.assertIn(f"{rel}: collects redis, whose snippet has ${{REDIS_ADDRESS}}, which nobody fills on Connect", self.problems())
+        self.write({k: v for k, v in MANIFEST.items() if k != "settings"}, SNIPPET.replace('\n  redis_addr = "${REDIS_ADDRESS}"', ""))
+        self.place(PLATFORM)
+        self.place(dict(PLATFORM, collects=[]))
+        self.assertIn(f"{rel}: has ${{SNIPPET}}, so it collects some integration", self.problems())
+
+    def test_the_password_is_never_a_literal_nor_printed(self):
+        rel = "platforms/linux/platform.yaml"
+        found = self.step(code="cat <<'A'\n${SNIPPET}\nA\nTELOPI_PASSWORD=hunter2\necho ${PASSWORD}\n")
+        self.assertIn(f"{rel}: step 1: sets TELOPI_PASSWORD to ${{PASSWORD}}, never to a literal", found)
+        self.assertIn(f"{rel}: step 1: never prints the password", found)
+        found = self.step(code="cat <<'A'\n${SNIPPET}\nA\npassword = \"hunter2\"\n")
+        self.assertIn(f'{rel}: step 1: writes no password: Alloy reads sys.env("TELOPI_PASSWORD")', found)
+        self.assertIn(f"{rel}: a step sets TELOPI_PASSWORD from ${{PASSWORD}}, which the snippets read", found)
+
+    def test_a_list_or_a_map_where_a_string_goes_is_a_problem_not_a_traceback(self):
+        for key, value in [("name", ["Linux"]), ("status", {"ready": 1}), ("collects", [["redis"]]),
+                           ("guide", ["x"]), ("steps", [{"title": ["x"], "text": "x", "language": "bash", "code": "x"}]),
+                           ("steps", ["x"]), ("steps", "x")]:
+            with self.subTest(key=key, value=value):
+                self.place(dict(PLATFORM, **{key: value}))
+                self.assertTrue(self.problems())
+
+    def test_the_repository(self):
+        self.assertEqual(ci.check_platforms(ci.ROOT)[0], [])
+
+
 if __name__ == "__main__":
     unittest.main()
