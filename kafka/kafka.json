@@ -363,11 +363,11 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#22c55e",
+                "color": "green",
                 "value": null
               },
               {
-                "color": "#f87171",
+                "color": "red",
                 "value": 1
               }
             ]

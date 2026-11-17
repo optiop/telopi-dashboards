@@ -101,7 +101,7 @@
       {
         "name": "workload",
         "label": "Workload",
-        "description": "A Deployment, StatefulSet or DaemonSet. Its pods are those whose names start with its name.",
+        "description": "A Deployment, StatefulSet or DaemonSet. Its pods are matched by the names Kubernetes gives them: <name>-<hash>-<suffix> for a Deployment, <name>-<suffix> for a DaemonSet, <name>-<n> for a StatefulSet. So api does not also catch api-gateway.",
         "type": "query",
         "datasource": {
           "type": "prometheus",
@@ -259,11 +259,11 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "#22c55e",
+                      "color": "green",
                       "value": null
                     },
                     {
-                      "color": "#f87171",
+                      "color": "red",
                       "value": 1
                     }
                   ]
@@ -317,7 +317,7 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "sum(kube_pod_container_status_waiting_reason{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\", reason=~\"CrashLoopBackOff|ImagePullBackOff|ErrImagePull|CreateContainerConfigError|CreateContainerError|InvalidImageName\"}) or vector(0)",
+          "expr": "sum(kube_pod_container_status_waiting_reason{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-[bcdfghjklmnpqrstvwxz2456789]{6,10})?-[bcdfghjklmnpqrstvwxz2456789]{5}|($workload)-[0-9]+|($workload)\", reason=~\"CrashLoopBackOff|ImagePullBackOff|ErrImagePull|CreateContainerConfigError|CreateContainerError|InvalidImageName\"}) or vector(0)",
           "refId": "A",
           "instant": false,
           "range": true,
@@ -331,11 +331,11 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#22c55e",
+                "color": "green",
                 "value": null
               },
               {
-                "color": "#f87171",
+                "color": "red",
                 "value": 1
               }
             ]
@@ -384,7 +384,7 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "sum(increase(kube_pod_container_status_restarts_total{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\"}[1h])) or vector(0)",
+          "expr": "sum(increase(kube_pod_container_status_restarts_total{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-[bcdfghjklmnpqrstvwxz2456789]{6,10})?-[bcdfghjklmnpqrstvwxz2456789]{5}|($workload)-[0-9]+|($workload)\"}[1h])) or vector(0)",
           "refId": "A",
           "instant": false,
           "range": true,
@@ -398,15 +398,15 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#22c55e",
+                "color": "green",
                 "value": null
               },
               {
-                "color": "#fb923c",
+                "color": "orange",
                 "value": 1
               },
               {
-                "color": "#f87171",
+                "color": "red",
                 "value": 10
               }
             ]
@@ -456,7 +456,7 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "sum(kube_pod_container_status_last_terminated_reason{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\", reason=\"OOMKilled\"}) or vector(0)",
+          "expr": "sum(kube_pod_container_status_last_terminated_reason{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-[bcdfghjklmnpqrstvwxz2456789]{6,10})?-[bcdfghjklmnpqrstvwxz2456789]{5}|($workload)-[0-9]+|($workload)\", reason=\"OOMKilled\"}) or vector(0)",
           "refId": "A",
           "instant": false,
           "range": true,
@@ -470,11 +470,11 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#22c55e",
+                "color": "green",
                 "value": null
               },
               {
-                "color": "#fb923c",
+                "color": "orange",
                 "value": 1
               }
             ]
@@ -537,11 +537,11 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#22c55e",
+                "color": "green",
                 "value": null
               },
               {
-                "color": "#fb923c",
+                "color": "orange",
                 "value": 1
               }
             ]
@@ -590,7 +590,7 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "sum(rate(container_cpu_usage_seconds_total{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\", container!=\"\", image!=\"\"}[$__rate_interval]))",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-[bcdfghjklmnpqrstvwxz2456789]{6,10})?-[bcdfghjklmnpqrstvwxz2456789]{5}|($workload)-[0-9]+|($workload)\", container!=\"\", image!=\"\"}[$__rate_interval]))",
           "refId": "A",
           "legendFormat": "CPU cores",
           "instant": false,
@@ -602,7 +602,7 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "sum(container_memory_working_set_bytes{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\", container!=\"\", image!=\"\"})",
+          "expr": "sum(container_memory_working_set_bytes{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-[bcdfghjklmnpqrstvwxz2456789]{6,10})?-[bcdfghjklmnpqrstvwxz2456789]{5}|($workload)-[0-9]+|($workload)\", container!=\"\", image!=\"\"})",
           "refId": "B",
           "legendFormat": "Memory",
           "instant": false,
@@ -806,11 +806,11 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "#22c55e",
+                      "color": "green",
                       "value": null
                     },
                     {
-                      "color": "#f87171",
+                      "color": "red",
                       "value": 1
                     }
                   ]
@@ -871,7 +871,7 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "max by (cluster, namespace, pod, container, state, reason) (label_replace(kube_pod_container_status_waiting_reason{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\", reason=~\"CrashLoopBackOff|ImagePullBackOff|ErrImagePull|CreateContainerConfigError|CreateContainerError|InvalidImageName\"} > 0, \"state\", \"Waiting now\", \"\", \"\") or label_replace(kube_pod_container_status_last_terminated_reason{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\", reason=~\"OOMKilled|Error|ContainerCannotRun\"} > 0, \"state\", \"Last stopped\", \"\", \"\"))",
+          "expr": "max by (cluster, namespace, pod, container, state, reason) (label_replace(kube_pod_container_status_waiting_reason{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-[bcdfghjklmnpqrstvwxz2456789]{6,10})?-[bcdfghjklmnpqrstvwxz2456789]{5}|($workload)-[0-9]+|($workload)\", reason=~\"CrashLoopBackOff|ImagePullBackOff|ErrImagePull|CreateContainerConfigError|CreateContainerError|InvalidImageName\"} > 0, \"state\", \"Waiting now\", \"\", \"\") or label_replace(kube_pod_container_status_last_terminated_reason{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-[bcdfghjklmnpqrstvwxz2456789]{6,10})?-[bcdfghjklmnpqrstvwxz2456789]{5}|($workload)-[0-9]+|($workload)\", reason=~\"OOMKilled|Error|ContainerCannotRun\"} > 0, \"state\", \"Last stopped\", \"\", \"\"))",
           "refId": "A",
           "instant": true,
           "range": false,
@@ -930,11 +930,11 @@
                     "type": "value",
                     "options": {
                       "Waiting now": {
-                        "color": "#f87171",
+                        "color": "red",
                         "index": 0
                       },
                       "Last stopped": {
-                        "color": "#fb923c",
+                        "color": "orange",
                         "index": 1
                       }
                     }
@@ -999,7 +999,7 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "sum by (namespace, pod) (rate(container_cpu_usage_seconds_total{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\", container!=\"\", image!=\"\"}[$__rate_interval]))",
+          "expr": "sum by (namespace, pod) (rate(container_cpu_usage_seconds_total{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-[bcdfghjklmnpqrstvwxz2456789]{6,10})?-[bcdfghjklmnpqrstvwxz2456789]{5}|($workload)-[0-9]+|($workload)\", container!=\"\", image!=\"\"}[$__rate_interval]))",
           "refId": "A",
           "legendFormat": "{{namespace}}/{{pod}}",
           "instant": false,
@@ -1067,7 +1067,7 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "sum(rate(container_cpu_usage_seconds_total{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\", container!=\"\", image!=\"\"}[$__rate_interval]))",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-[bcdfghjklmnpqrstvwxz2456789]{6,10})?-[bcdfghjklmnpqrstvwxz2456789]{5}|($workload)-[0-9]+|($workload)\", container!=\"\", image!=\"\"}[$__rate_interval]))",
           "refId": "A",
           "legendFormat": "Used",
           "instant": false,
@@ -1079,7 +1079,7 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "sum(kube_pod_container_resource_requests{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\", resource=\"cpu\"} * on (cluster, namespace, pod) group_left () max by (cluster, namespace, pod) (kube_pod_status_phase{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\", phase=~\"Pending|Running\"}))",
+          "expr": "sum(kube_pod_container_resource_requests{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-[bcdfghjklmnpqrstvwxz2456789]{6,10})?-[bcdfghjklmnpqrstvwxz2456789]{5}|($workload)-[0-9]+|($workload)\", resource=\"cpu\"} * on (cluster, namespace, pod) group_left () max by (cluster, namespace, pod) (kube_pod_status_phase{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-[bcdfghjklmnpqrstvwxz2456789]{6,10})?-[bcdfghjklmnpqrstvwxz2456789]{5}|($workload)-[0-9]+|($workload)\", phase=~\"Pending|Running\"}))",
           "refId": "B",
           "legendFormat": "Requested",
           "instant": false,
@@ -1091,7 +1091,7 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "sum(kube_pod_container_resource_limits{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\", resource=\"cpu\"} * on (cluster, namespace, pod) group_left () max by (cluster, namespace, pod) (kube_pod_status_phase{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\", phase=~\"Pending|Running\"}))",
+          "expr": "sum(kube_pod_container_resource_limits{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-[bcdfghjklmnpqrstvwxz2456789]{6,10})?-[bcdfghjklmnpqrstvwxz2456789]{5}|($workload)-[0-9]+|($workload)\", resource=\"cpu\"} * on (cluster, namespace, pod) group_left () max by (cluster, namespace, pod) (kube_pod_status_phase{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-[bcdfghjklmnpqrstvwxz2456789]{6,10})?-[bcdfghjklmnpqrstvwxz2456789]{5}|($workload)-[0-9]+|($workload)\", phase=~\"Pending|Running\"}))",
           "refId": "C",
           "legendFormat": "Limit",
           "instant": false,
@@ -1145,7 +1145,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#fb923c"
+                  "fixedColor": "orange"
                 }
               },
               {
@@ -1174,7 +1174,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#f87171"
+                  "fixedColor": "red"
                 }
               },
               {
@@ -1229,7 +1229,7 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "sum by (namespace, pod) (container_memory_working_set_bytes{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\", container!=\"\", image!=\"\"})",
+          "expr": "sum by (namespace, pod) (container_memory_working_set_bytes{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-[bcdfghjklmnpqrstvwxz2456789]{6,10})?-[bcdfghjklmnpqrstvwxz2456789]{5}|($workload)-[0-9]+|($workload)\", container!=\"\", image!=\"\"})",
           "refId": "A",
           "legendFormat": "{{namespace}}/{{pod}}",
           "instant": false,
@@ -1296,7 +1296,7 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "sum(container_memory_working_set_bytes{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\", container!=\"\", image!=\"\"})",
+          "expr": "sum(container_memory_working_set_bytes{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-[bcdfghjklmnpqrstvwxz2456789]{6,10})?-[bcdfghjklmnpqrstvwxz2456789]{5}|($workload)-[0-9]+|($workload)\", container!=\"\", image!=\"\"})",
           "refId": "A",
           "legendFormat": "Used",
           "instant": false,
@@ -1308,7 +1308,7 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "sum(kube_pod_container_resource_requests{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\", resource=\"memory\"} * on (cluster, namespace, pod) group_left () max by (cluster, namespace, pod) (kube_pod_status_phase{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\", phase=~\"Pending|Running\"}))",
+          "expr": "sum(kube_pod_container_resource_requests{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-[bcdfghjklmnpqrstvwxz2456789]{6,10})?-[bcdfghjklmnpqrstvwxz2456789]{5}|($workload)-[0-9]+|($workload)\", resource=\"memory\"} * on (cluster, namespace, pod) group_left () max by (cluster, namespace, pod) (kube_pod_status_phase{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-[bcdfghjklmnpqrstvwxz2456789]{6,10})?-[bcdfghjklmnpqrstvwxz2456789]{5}|($workload)-[0-9]+|($workload)\", phase=~\"Pending|Running\"}))",
           "refId": "B",
           "legendFormat": "Requested",
           "instant": false,
@@ -1320,7 +1320,7 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "sum(kube_pod_container_resource_limits{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\", resource=\"memory\"} * on (cluster, namespace, pod) group_left () max by (cluster, namespace, pod) (kube_pod_status_phase{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\", phase=~\"Pending|Running\"}))",
+          "expr": "sum(kube_pod_container_resource_limits{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-[bcdfghjklmnpqrstvwxz2456789]{6,10})?-[bcdfghjklmnpqrstvwxz2456789]{5}|($workload)-[0-9]+|($workload)\", resource=\"memory\"} * on (cluster, namespace, pod) group_left () max by (cluster, namespace, pod) (kube_pod_status_phase{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-[bcdfghjklmnpqrstvwxz2456789]{6,10})?-[bcdfghjklmnpqrstvwxz2456789]{5}|($workload)-[0-9]+|($workload)\", phase=~\"Pending|Running\"}))",
           "refId": "C",
           "legendFormat": "Limit",
           "instant": false,
@@ -1373,7 +1373,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#fb923c"
+                  "fixedColor": "orange"
                 }
               },
               {
@@ -1402,7 +1402,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#f87171"
+                  "fixedColor": "red"
                 }
               },
               {
@@ -1457,7 +1457,7 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "sum by (namespace, pod) (rate(container_cpu_cfs_throttled_periods_total{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\", container!=\"\", image!=\"\"}[$__rate_interval])) / sum by (namespace, pod) (rate(container_cpu_cfs_periods_total{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\", container!=\"\", image!=\"\"}[$__rate_interval]))",
+          "expr": "sum by (namespace, pod) (rate(container_cpu_cfs_throttled_periods_total{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-[bcdfghjklmnpqrstvwxz2456789]{6,10})?-[bcdfghjklmnpqrstvwxz2456789]{5}|($workload)-[0-9]+|($workload)\", container!=\"\", image!=\"\"}[$__rate_interval])) / sum by (namespace, pod) (rate(container_cpu_cfs_periods_total{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-[bcdfghjklmnpqrstvwxz2456789]{6,10})?-[bcdfghjklmnpqrstvwxz2456789]{5}|($workload)-[0-9]+|($workload)\", container!=\"\", image!=\"\"}[$__rate_interval]))",
           "refId": "A",
           "legendFormat": "{{namespace}}/{{pod}}",
           "instant": false,
@@ -1525,7 +1525,7 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "sum by (namespace, pod) (increase(kube_pod_container_status_restarts_total{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\"}[$__rate_interval])) > 0",
+          "expr": "sum by (namespace, pod) (increase(kube_pod_container_status_restarts_total{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-[bcdfghjklmnpqrstvwxz2456789]{6,10})?-[bcdfghjklmnpqrstvwxz2456789]{5}|($workload)-[0-9]+|($workload)\"}[$__rate_interval])) > 0",
           "refId": "A",
           "legendFormat": "{{namespace}}/{{pod}}",
           "instant": false,
@@ -1604,7 +1604,7 @@
                 "type": "prometheus",
                 "uid": "gaas-mimir"
               },
-              "expr": "sum by (namespace, pod) (rate(container_network_receive_bytes_total{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\"}[$__rate_interval])) * 8",
+              "expr": "sum by (namespace, pod) (rate(container_network_receive_bytes_total{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-[bcdfghjklmnpqrstvwxz2456789]{6,10})?-[bcdfghjklmnpqrstvwxz2456789]{5}|($workload)-[0-9]+|($workload)\"}[$__rate_interval])) * 8",
               "refId": "A",
               "legendFormat": "{{namespace}}/{{pod}}",
               "instant": false,
@@ -1670,7 +1670,7 @@
                 "type": "prometheus",
                 "uid": "gaas-mimir"
               },
-              "expr": "sum by (namespace, pod) (rate(container_network_transmit_bytes_total{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-.*)?\"}[$__rate_interval])) * 8",
+              "expr": "sum by (namespace, pod) (rate(container_network_transmit_bytes_total{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-[bcdfghjklmnpqrstvwxz2456789]{6,10})?-[bcdfghjklmnpqrstvwxz2456789]{5}|($workload)-[0-9]+|($workload)\"}[$__rate_interval])) * 8",
               "refId": "A",
               "legendFormat": "{{namespace}}/{{pod}}",
               "instant": false,
@@ -1860,11 +1860,11 @@
                       "mode": "absolute",
                       "steps": [
                         {
-                          "color": "#22c55e",
+                          "color": "green",
                           "value": null
                         },
                         {
-                          "color": "#fb923c",
+                          "color": "orange",
                           "value": 1
                         }
                       ]
