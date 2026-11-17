@@ -83,8 +83,8 @@ steps:
       TELOPI
   - title: Check that it arrived
     text: >-
-      Alloy should be active and log no error. Within two minutes See it
-      arrive, below, shows Arriving for metrics, and the Machines
+      Alloy should be active and log no error. Within two minutes the See it
+      arrive section, below, shows Arriving for metrics, and the Machines
       dashboard in your Grafana fills. A 401 in the log is a wrong
       username or password.
     language: bash

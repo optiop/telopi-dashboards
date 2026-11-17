@@ -300,7 +300,7 @@ steps:                        # none for soon
       ${SNIPPET}
       ALLOY
   - title: Check that it arrived
-    text: Within two minutes See it arrive, below, shows Arriving for metrics.
+    text: Within two minutes the See it arrive section, below, shows Arriving for metrics.
     language: bash
     code: systemctl is-active alloy
 ```

@@ -1,8 +1,9 @@
 // Kubernetes: kube-state-metrics, and each node's kubelet and cAdvisor, from
 // an Alloy that runs in the cluster, sent to your Telopi stack every minute.
 // Alloy reaches the kubelets through the Kubernetes API, so its service
-// account may get nodes/proxy and nodes/metrics. The password is your ingest
-// key's, read from the environment variable TELOPI_PASSWORD.
+// account needs nodes/metrics, which the Grafana Alloy chart's role gives, and
+// nodes/proxy, which the telopi-alloy-kubelet ClusterRole adds. The password
+// is your ingest key's, read from the environment variable TELOPI_PASSWORD.
 
 // kube-state-metrics: pods, workloads, jobs, nodes and their requests.
 discovery.kubernetes "kubernetes_state" {
