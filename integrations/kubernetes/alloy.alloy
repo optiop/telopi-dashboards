@@ -1,8 +1,9 @@
 // Kubernetes: kube-state-metrics, and each node's kubelet and cAdvisor, from
-// an Alloy that runs in the cluster, sent to your Telopi stack every minute.
-// Alloy reaches the kubelets through the Kubernetes API, so its service
-// account may get nodes/proxy and nodes/metrics. The password is your ingest
-// key's, read from the environment variable TELOPI_PASSWORD.
+// an Alloy that runs in the cluster, sent to your Telopi stack every minute,
+// and the logs of every pod's containers. Alloy reaches the kubelets and the
+// logs through the Kubernetes API, so its service account may get nodes/proxy,
+// nodes/metrics and pods/log. The password is your ingest key's, read from the
+// environment variable TELOPI_PASSWORD.
 
 // kube-state-metrics: pods, workloads, jobs, nodes and their requests.
 discovery.kubernetes "kubernetes_state" {
@@ -123,6 +124,61 @@ prometheus.remote_write "kubernetes" {
 
   endpoint {
     url = "${INGEST_URL}/mimir/api/v1/push"
+
+    basic_auth {
+      username = "${USERNAME}"
+      password = sys.env("TELOPI_PASSWORD")
+    }
+  }
+}
+
+// The logs of each pod's containers, read through the Kubernetes API, so one
+// Alloy reads the whole cluster's.
+discovery.kubernetes "kubernetes_pods" {
+  role = "pod"
+}
+
+discovery.relabel "kubernetes_logs" {
+  targets = discovery.kubernetes.kubernetes_pods.targets
+
+  rule {
+    source_labels = ["__meta_kubernetes_namespace"]
+    target_label  = "namespace"
+  }
+
+  rule {
+    source_labels = ["__meta_kubernetes_pod_name"]
+    target_label  = "pod"
+  }
+
+  rule {
+    source_labels = ["__meta_kubernetes_pod_container_name"]
+    target_label  = "container"
+  }
+
+  // The app: the pod's app.kubernetes.io/name label, else its app label, else
+  // the container's name. Loki takes it as the service's name.
+  rule {
+    source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name", "__meta_kubernetes_pod_label_app", "__meta_kubernetes_pod_container_name"]
+    separator     = ";"
+    regex         = ";*([^;]+).*"
+    target_label  = "app"
+  }
+}
+
+loki.source.kubernetes "kubernetes_logs" {
+  targets    = discovery.relabel.kubernetes_logs.output
+  forward_to = [loki.write.kubernetes.receiver]
+}
+
+loki.write "kubernetes" {
+  // The environment's name, as on the metrics.
+  external_labels = {
+    cluster = "${ENVIRONMENT}",
+  }
+
+  endpoint {
+    url = "${INGEST_URL}/loki/loki/api/v1/push"
 
     basic_auth {
       username = "${USERNAME}"
