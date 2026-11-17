@@ -475,9 +475,9 @@ def platform_problems(rel, doc, folder, snippets, root=ROOT):
         out.append(f"{rel}: a step asks for the password, read -rsp ... {PASSWORD_ENV}, which the snippets read")
     last = steps[-1]
     if not (str(last.get("title")).startswith("Check")
-            and ("Receiving data" in str(last.get("text")) or "/api/v1/query" in str(last.get("code")))):
+            and ("Arriving" in str(last.get("text")) or "/api/v1/query" in str(last.get("code")))):
         out.append(f"{rel}: its last step, titled Check ..., says how to tell the data arrived: "
-                   "Connect's Receiving data, or a query of the stack")
+                   "Arriving on Connect's See it arrive, or a query of the stack")
     return out
 
 

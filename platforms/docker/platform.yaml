@@ -69,8 +69,9 @@ steps:
     text: >-
       Alloy should be running and log no error (in a container it always
       logs one about udev, which is harmless and left out). Within two
-      minutes Connect in the portal says Receiving data, and the Machines dashboard in your
-      Grafana fills. A 401 in the log is a wrong username or password.
+      minutes See it arrive, below, shows Arriving for metrics, and the
+      Machines dashboard in your Grafana fills. A 401 in the log is a
+      wrong username or password.
     language: bash
     code: |
       docker compose logs --since 5m alloy | grep -E "level=error|HTTP status 40[13]" | grep -v "udev device properties" || echo "No errors in the last five minutes."

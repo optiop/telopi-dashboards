@@ -16,11 +16,13 @@ and where visitors come from.
 
 ## What you need
 
-Telopi turns it on for your stack: open a support ticket with the addresses
-of the sites that will send (browsers may send only from those). Telopi then
-gives you the snippet to paste before `</head>` on every page. Nothing to
-install or run, and no password: a web page cannot keep one, so the sites'
-addresses and rate limits bound what reaches your stack.
+Nothing to install or run. On the **Website** page of the Telopi portal, an
+owner or admin of your organization adds each site that will send: the
+address your visitors open, such as `https://www.example.com` (browsers may
+send only from those). The snippet then appears on the same page: paste it
+before `</head>` on every page of those sites, and the **Website** dashboard
+fills as visitors come. There is no password: a web page cannot keep one, so
+your sites' addresses and rate limits bound what reaches your stack.
 
 Search and AI crawlers do not run a page's JavaScript, so they are not
 counted; ad blockers can stop some visitors' browsers from sending.

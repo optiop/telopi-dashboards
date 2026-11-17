@@ -74,10 +74,11 @@ steps:
       TELOPI
   - title: Check that it arrived
     text: >-
-      Alloy should be running and log no error. Within two minutes Connect in
-      the portal says Receiving data, and the Machines dashboard in your
-      Grafana fills; macOS has fewer counters than Linux, so some of its
-      panels stay empty. A 401 in the log is a wrong username or password.
+      Alloy should be running and log no error. Within two minutes See it
+      arrive, below, shows Arriving for metrics, and the Machines
+      dashboard in your Grafana fills; macOS has fewer counters than
+      Linux, so some of its panels stay empty. A 401 in the log is a wrong
+      username or password.
     language: bash
     code: |
       sudo launchctl print system/com.telopi.alloy | grep -E "^\s+state = "

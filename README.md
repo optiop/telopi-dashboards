@@ -185,7 +185,7 @@ signals: [metrics]          # some of metrics, logs, traces
 check:                      # does the tenant receive it? Data in the last hour means yes
   datasource: mimir         # mimir (PromQL) or loki (LogQL)
   query: group(max_over_time(redis_up[1h]))
-install: alloy              # alloy: alloy.alloy is the snippet; telopi: Telopi does it, the README says how
+install: alloy              # alloy: alloy.alloy is the snippet; telopi: no snippet, the README says how (a portal page or Telopi sets it up)
 dashboards:                 # optional: every dashboard of its set's folder, by uid, with its title
   - uid: telopi-redis
     title: Redis
@@ -300,7 +300,7 @@ steps:                        # none for soon
       ${SNIPPET}
       ALLOY
   - title: Check that it arrived
-    text: Within two minutes Connect in the portal says Receiving data.
+    text: Within two minutes See it arrive, below, shows Arriving for metrics.
     language: bash
     code: systemctl is-active alloy
 ```
@@ -326,10 +326,11 @@ Only a step's `code` is filled, and only with these:
 - **A snippet a platform embeds** uses only `${INGEST_URL}`, `${USERNAME}`
   and `${ENVIRONMENT}`: Connect asks for nothing else.
 - **The last step tells whether the data arrived**: its title starts with
-  *Check*, and it points at Connect's *Receiving data* (the integration's
-  check, which the portal runs) or queries the stack. Ingest keys cannot
-  read (ADR-0038), so a step's own `curl` checks the agent's status, not the
-  stack.
+  *Check*, and it points at *Arriving* on Connect's *See it arrive* (the
+  last step the portal shows under a platform's steps: what reached the
+  stack in the last five minutes, per signal) or queries the stack. Ingest
+  keys cannot read (ADR-0038), so a step's own `curl` checks the agent's
+  status, not the stack.
 - **Try it by hand** on the platform before it is `ready`: CI parses the
   steps, it does not run them.
 
