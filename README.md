@@ -83,6 +83,11 @@ customers have it, so add the folder and the platform's change together.
   and the graph is empty.
 - **It works for every customer.** One `main` serves them all: a panel that
   needs telemetry not every customer sends yet waits until they do.
+- **Status colours by name.** Good, warning and bad are Grafana's named
+  colours `green`, `orange` and `red`, which Grafana shades for its light
+  and its dark theme; a hex value is one shade in both and reads pale in the
+  light theme. Telopi's blue (`#4e80ee`) is the one hex colour, for a plain
+  series.
 
 ## Changing a dashboard
 
