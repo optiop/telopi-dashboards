@@ -25,11 +25,11 @@ And as they are written:
   `{cluster="production", namespace="shop"}`.
 
 Every series and every log line carries the cluster's name in the `cluster`
-label, which is the environment's name in Telopi. The **Kubernetes: clusters** dashboard has one
-row per environment (nodes, pods, restarts, CPU and memory requested and
-used) and what is wrong now; **Kubernetes: workloads** has each workload with
-its pods, containers that cannot start or ran out of memory, and CPU and
-memory against requests and limits.
+label, which is the environment's name in Telopi. The **Kubernetes:
+clusters** dashboard has one row per environment (nodes, pods, restarts, CPU
+and memory requested and used) and what is wrong now; **Kubernetes:
+workloads** has each workload with its pods, containers that cannot start or
+ran out of memory, and CPU and memory against requests and limits.
 
 For the nodes themselves (CPU, memory, disks), add the Machines integration
 to the same Alloy, or run it on each node.
@@ -50,7 +50,10 @@ to the same Alloy, or run it on each node.
   (`loki.source.kubernetes`), not from the nodes' disks, so it runs as a
   Deployment with one replica and needs no host paths. That suits small and
   medium clusters. On a large or busy one, run Alloy as a DaemonSet that
-  reads `/var/log/pods` on each node instead.
+  reads `/var/log/pods` on each node instead. Alloy keeps how far it has read
+  on its own disk, which the chart does not keep, so after a restart it reads
+  each pod's logs again from the start of what Kubernetes keeps. Loki drops
+  the lines it already has; you may see a short burst of older lines.
 - **An ingest key** from the Ingest keys page of the Telopi portal. Its
   username is in the snippet; put its password in a Secret and give it to
   Alloy as the environment variable `TELOPI_PASSWORD`

@@ -71,9 +71,10 @@ steps:
   - title: Check that it arrived
     text: >-
       Alloy should be rolled out and log no error. Within two minutes Connect
-      in the portal says Receiving data, the Kubernetes dashboards in your
-      Grafana fill, and the pods' logs are in Explore under Loki. A 401 in
-      the log is a wrong username or password.
+      in the portal says Receiving data, and the Kubernetes dashboards in your
+      Grafana fill. Receiving data counts the metrics only: to see the pods'
+      logs, open Explore, pick Loki and query {cluster="production"} with your
+      cluster's name. A 401 in the log is a wrong username or password.
     language: bash
     code: |
       kubectl --namespace telopi rollout status deployment/alloy
