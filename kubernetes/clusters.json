@@ -135,7 +135,7 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "sum(kube_node_status_condition{cluster=~\"$environment\", condition=\"Ready\", status!=\"true\"}) or vector(0)",
+          "expr": "(sum(kube_node_status_condition{cluster=~\"$environment\", condition=\"Ready\", status!=\"true\"}) or vector(0)) and on() (count(kube_node_info{cluster=~\"$environment\"}) > 0)",
           "refId": "B",
           "legendFormat": "Not ready",
           "instant": false,
@@ -172,8 +172,12 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "#4e80ee",
+                      "color": "text",
                       "value": null
+                    },
+                    {
+                      "color": "#4e80ee",
+                      "value": 0
                     }
                   ]
                 }
@@ -198,8 +202,12 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "green",
+                      "color": "text",
                       "value": null
+                    },
+                    {
+                      "color": "green",
+                      "value": 0
                     },
                     {
                       "color": "red",
@@ -268,7 +276,7 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "sum(kube_pod_status_phase{cluster=~\"$environment\", phase=~\"Pending|Failed|Unknown\"}) or vector(0)",
+          "expr": "(sum(kube_pod_status_phase{cluster=~\"$environment\", phase=~\"Pending|Failed|Unknown\"}) or vector(0)) and on() (count(kube_node_info{cluster=~\"$environment\"}) > 0)",
           "refId": "B",
           "legendFormat": "Not running",
           "instant": false,
@@ -305,8 +313,12 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "#4e80ee",
+                      "color": "text",
                       "value": null
+                    },
+                    {
+                      "color": "#4e80ee",
+                      "value": 0
                     }
                   ]
                 }
@@ -331,8 +343,12 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "green",
+                      "color": "text",
                       "value": null
+                    },
+                    {
+                      "color": "green",
+                      "value": 0
                     },
                     {
                       "color": "orange",
@@ -389,7 +405,7 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "sum(increase(kube_pod_container_status_restarts_total{cluster=~\"$environment\"}[1h])) or vector(0)",
+          "expr": "(sum(increase(kube_pod_container_status_restarts_total{cluster=~\"$environment\"}[1h])) or vector(0)) and on() (count(kube_node_info{cluster=~\"$environment\"}) > 0)",
           "refId": "A",
           "instant": false,
           "range": true,
@@ -403,8 +419,12 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "text",
                 "value": null
+              },
+              {
+                "color": "green",
+                "value": 0
               },
               {
                 "color": "orange",
@@ -475,8 +495,12 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "text",
                 "value": null
+              },
+              {
+                "color": "green",
+                "value": 0
               },
               {
                 "color": "orange",
@@ -547,8 +571,12 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "text",
                 "value": null
+              },
+              {
+                "color": "green",
+                "value": 0
               },
               {
                 "color": "orange",
@@ -619,8 +647,12 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "text",
                 "value": null
+              },
+              {
+                "color": "green",
+                "value": 0
               },
               {
                 "color": "orange",
@@ -1199,7 +1231,7 @@
               "type": "auto"
             }
           },
-          "noValue": "Nothing to look at: every container started."
+          "noValue": "No container is stuck starting, or no kube-state-metrics data has arrived yet."
         },
         "overrides": [
           {
@@ -1321,7 +1353,7 @@
               "type": "auto"
             }
           },
-          "noValue": "None: no container stopped on an error."
+          "noValue": "No container stopped on an error, or no kube-state-metrics data has arrived yet."
         },
         "overrides": [
           {
