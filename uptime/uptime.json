@@ -4,7 +4,6 @@
   "description": "Checks of public websites from Telopi, every minute, with nothing installed on the sites.",
   "tags": [
     "telopi",
-    "gaas",
     "uptime"
   ],
   "timezone": "browser",
@@ -120,7 +119,7 @@
           "values": false
         },
         "colorMode": "value",
-        "graphMode": "area",
+        "graphMode": "none",
         "textMode": "auto",
         "justifyMode": "auto",
         "orientation": "auto",
@@ -355,13 +354,13 @@
       "id": 7,
       "type": "table",
       "title": "Every site",
-      "description": "Status is the last check. Availability and response time are over the selected time range.",
+      "description": "Status is the last check; sites that are down come first, then by company. Availability and response time are over the selected time range. HTTP status is the last answer's: green is a normal answer, orange 403 is a bot wall (the site refuses automated visitors but serves people, so it counts as up), red is an error or no answer.",
       "datasource": {
         "type": "prometheus",
         "uid": "gaas-mimir"
       },
       "gridPos": {
-        "h": 10,
+        "h": 12,
         "w": 24,
         "x": 0,
         "y": 6
@@ -459,7 +458,18 @@
           "options": {
             "sort": [
               {
-                "field": "Availability",
+                "field": "Company",
+                "desc": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "Status",
                 "desc": false
               }
             ]
@@ -488,6 +498,25 @@
                     "targetBlank": true
                   }
                 ]
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "regex",
+                    "options": {
+                      "pattern": "^https?://(.+?)/?$",
+                      "result": {
+                        "text": "$1",
+                        "index": 0
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.minWidth",
+                "value": 180
               }
             ]
           },
@@ -595,7 +624,59 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 110
+                "value": 140
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "403": {
+                        "text": "403 · bot wall",
+                        "color": "orange",
+                        "index": 0
+                      },
+                      "0": {
+                        "text": "No answer",
+                        "color": "red",
+                        "index": 1
+                      }
+                    }
+                  },
+                  {
+                    "type": "range",
+                    "options": {
+                      "from": 200,
+                      "to": 299,
+                      "result": {
+                        "color": "green",
+                        "index": 2
+                      }
+                    }
+                  },
+                  {
+                    "type": "range",
+                    "options": {
+                      "from": 100,
+                      "to": 999,
+                      "result": {
+                        "color": "red",
+                        "index": 3
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "description",
+                "value": "The last answer's status code. 403 counts as up: many sites put a bot wall in front that refuses automated checks like this one while serving people normally."
               }
             ]
           },
@@ -657,7 +738,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 16
+        "y": 18
       },
       "targets": [
         {
@@ -738,7 +819,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 26
+        "y": 28
       },
       "targets": [
         {
