@@ -1,0 +1,1106 @@
+{
+  "uid": "telopi-services",
+  "title": "Services",
+  "description": "Each service that sends traces: requests per second, the share that fail and how long they take (p50, p95, p99), from the span metrics Telopi writes from your traces. A service is its OpenTelemetry service.name; its environment is the resource attribute deployment.environment.name.",
+  "tags": [
+    "telopi",
+    "traces"
+  ],
+  "timezone": "browser",
+  "editable": true,
+  "graphTooltip": 1,
+  "schemaVersion": 41,
+  "version": 1,
+  "refresh": "1m",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "links": [
+    {
+      "type": "dashboards",
+      "tags": [
+        "telopi"
+      ],
+      "asDropdown": true,
+      "title": "Telopi dashboards",
+      "includeVars": false,
+      "keepTime": true,
+      "targetBlank": false,
+      "icon": "external link",
+      "tooltip": "",
+      "url": ""
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "name": "Deploys",
+        "enable": true,
+        "hide": false,
+        "iconColor": "purple",
+        "datasource": {
+          "type": "loki",
+          "uid": "gaas-loki"
+        },
+        "expr": "{service_name=\"telopi-deploys\", environment=~\"$environment\"} | json",
+        "titleFormat": "{{service}} {{status}}",
+        "textFormat": "{{title}}",
+        "tagKeys": "provider,environment,version",
+        "instant": false
+      }
+    ]
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "environment",
+        "label": "Environment",
+        "description": "An environment is the name your services report in the OpenTelemetry resource attribute deployment.environment.name, the same name as the environment in the Telopi portal. Services that do not set it show under All.",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "gaas-mimir"
+        },
+        "query": {
+          "query": "label_values(traces_spanmetrics_calls_total, cluster)",
+          "refId": "environment",
+          "qryType": 1
+        },
+        "definition": "label_values(traces_spanmetrics_calls_total, cluster)",
+        "refresh": 2,
+        "sort": 1,
+        "regex": "",
+        "multi": true,
+        "includeAll": true,
+        "hide": 0,
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "allValue": ".*"
+      },
+      {
+        "name": "service",
+        "label": "Service",
+        "description": "A service is the OpenTelemetry resource attribute service.name.",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "gaas-mimir"
+        },
+        "query": {
+          "query": "label_values(traces_spanmetrics_calls_total{cluster=~\"$environment\"}, service)",
+          "refId": "service",
+          "qryType": 1
+        },
+        "definition": "label_values(traces_spanmetrics_calls_total{cluster=~\"$environment\"}, service)",
+        "refresh": 2,
+        "sort": 1,
+        "regex": "",
+        "multi": true,
+        "includeAll": true,
+        "hide": 0,
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "allValue": ".*"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Overview",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "panels": []
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Requests",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 1
+      },
+      "description": "Requests per second your services served (server and consumer spans), now.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "sum(rate(traces_spanmetrics_calls_total{cluster=~\"$environment\", service=~\"$service\", span_kind=~\"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER\"}[$__rate_interval]))",
+          "refId": "A",
+          "legendFormat": "Requests",
+          "instant": true,
+          "range": false,
+          "interval": "1m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#4e80ee",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "No traces yet",
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Errors",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 1
+      },
+      "description": "The share of those requests that failed (span status Error), now.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "(100 * sum(rate(traces_spanmetrics_calls_total{cluster=~\"$environment\", service=~\"$service\", span_kind=~\"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER\", status_code=\"STATUS_CODE_ERROR\"}[$__rate_interval])) / sum(rate(traces_spanmetrics_calls_total{cluster=~\"$environment\", service=~\"$service\", span_kind=~\"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER\"}[$__rate_interval]))) or vector(0)",
+          "refId": "A",
+          "legendFormat": "Errors",
+          "instant": true,
+          "range": false,
+          "interval": "1m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "No traces yet",
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Duration p95",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 1
+      },
+      "description": "95% of requests took at most this long, now.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(traces_spanmetrics_latency_bucket{cluster=~\"$environment\", service=~\"$service\", span_kind=~\"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER\"}[$__rate_interval])))",
+          "refId": "A",
+          "legendFormat": "Duration p95",
+          "instant": true,
+          "range": false,
+          "interval": "1m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 2
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "No traces yet",
+          "decimals": 3
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Services",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 1
+      },
+      "description": "Services that served requests in the dashboard's time range.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "count(count by (service) (increase(traces_spanmetrics_calls_total{cluster=~\"$environment\", service=~\"$service\", span_kind=~\"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER\"}[$__range]) > 0)) or vector(0)",
+          "refId": "A",
+          "legendFormat": "Services",
+          "instant": true,
+          "range": false,
+          "interval": "1m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#4e80ee",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "No traces yet",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "id": 6,
+      "type": "row",
+      "title": "Services",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "panels": []
+    },
+    {
+      "id": 7,
+      "type": "table",
+      "title": "Services",
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 6
+      },
+      "description": "Each service in each environment, over the dashboard's time range: requests per second, the share that failed, and the duration half, 95% and 99% of requests stayed under. Sorted by errors.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "sum by (cluster, service) (rate(traces_spanmetrics_calls_total{cluster=~\"$environment\", service=~\"$service\", span_kind=~\"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER\"}[$__range]))",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "100 * (sum by (cluster, service) (rate(traces_spanmetrics_calls_total{cluster=~\"$environment\", service=~\"$service\", span_kind=~\"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER\", status_code=\"STATUS_CODE_ERROR\"}[$__range])) or (0 * sum by (cluster, service) (rate(traces_spanmetrics_calls_total{cluster=~\"$environment\", service=~\"$service\", span_kind=~\"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER\"}[$__range])))) / sum by (cluster, service) (rate(traces_spanmetrics_calls_total{cluster=~\"$environment\", service=~\"$service\", span_kind=~\"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER\"}[$__range]))",
+          "refId": "B",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "histogram_quantile(0.50, sum by (cluster, service, le) (rate(traces_spanmetrics_latency_bucket{cluster=~\"$environment\", service=~\"$service\", span_kind=~\"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER\"}[$__range])))",
+          "refId": "C",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "histogram_quantile(0.95, sum by (cluster, service, le) (rate(traces_spanmetrics_latency_bucket{cluster=~\"$environment\", service=~\"$service\", span_kind=~\"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER\"}[$__range])))",
+          "refId": "D",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "histogram_quantile(0.99, sum by (cluster, service, le) (rate(traces_spanmetrics_latency_bucket{cluster=~\"$environment\", service=~\"$service\", span_kind=~\"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER\"}[$__range])))",
+          "refId": "E",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "cluster": "Environment",
+              "service": "Service",
+              "Value #A": "Requests/s",
+              "Value #B": "Errors",
+              "Value #C": "p50",
+              "Value #D": "p95",
+              "Value #E": "p99"
+            },
+            "indexByName": {
+              "cluster": 0,
+              "service": 1,
+              "Value #A": 2,
+              "Value #B": 3,
+              "Value #C": 4,
+              "Value #D": 5,
+              "Value #E": 6
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "Errors",
+                "desc": true
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          },
+          "noValue": "No traces from your services yet"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Requests/s"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "reqps"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Errors"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 1
+                    },
+                    {
+                      "color": "red",
+                      "value": 5
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "p50|p95|p99"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "decimals",
+                "value": 3
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Environment"
+            },
+            "properties": [
+              {
+                "id": "noValue",
+                "value": "(none)"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "fields": ""
+        }
+      }
+    },
+    {
+      "id": 8,
+      "type": "row",
+      "title": "Over time",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 15
+      },
+      "panels": []
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Requests, by service",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "description": "Requests per second each service served.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "sum by (service) (rate(traces_spanmetrics_calls_total{cluster=~\"$environment\", service=~\"$service\", span_kind=~\"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER\"}[$__rate_interval]))",
+          "refId": "A",
+          "legendFormat": "{{service}}",
+          "instant": false,
+          "range": true,
+          "interval": "1m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": true,
+            "axisSoftMin": 0,
+            "lineInterpolation": "smooth"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0,
+          "noValue": "No traces from your services yet",
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Errors, by service",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "description": "The share of each service's requests that failed.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "100 * sum by (service) (rate(traces_spanmetrics_calls_total{cluster=~\"$environment\", service=~\"$service\", span_kind=~\"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER\", status_code=\"STATUS_CODE_ERROR\"}[$__rate_interval])) / sum by (service) (rate(traces_spanmetrics_calls_total{cluster=~\"$environment\", service=~\"$service\", span_kind=~\"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER\"}[$__rate_interval]))",
+          "refId": "A",
+          "legendFormat": "{{service}}",
+          "instant": false,
+          "range": true,
+          "interval": "1m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": true,
+            "axisSoftMin": 0,
+            "lineInterpolation": "smooth"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0,
+          "noValue": "No traces from your services yet",
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Duration p95, by service",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 24
+      },
+      "description": "95% of each service's requests took at most this long.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "histogram_quantile(0.95, sum by (service, le) (rate(traces_spanmetrics_latency_bucket{cluster=~\"$environment\", service=~\"$service\", span_kind=~\"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER\"}[$__rate_interval])))",
+          "refId": "A",
+          "legendFormat": "{{service}}",
+          "instant": false,
+          "range": true,
+          "interval": "1m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": true,
+            "axisSoftMin": 0,
+            "lineInterpolation": "smooth"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0,
+          "noValue": "No traces from your services yet",
+          "decimals": 3
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Duration: p50, p95, p99",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 24
+      },
+      "description": "Half, 95% and 99% of all the selected services' requests took at most this long.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le) (rate(traces_spanmetrics_latency_bucket{cluster=~\"$environment\", service=~\"$service\", span_kind=~\"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER\"}[$__rate_interval])))",
+          "refId": "A",
+          "legendFormat": "p50",
+          "instant": false,
+          "range": true,
+          "interval": "1m"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(traces_spanmetrics_latency_bucket{cluster=~\"$environment\", service=~\"$service\", span_kind=~\"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER\"}[$__rate_interval])))",
+          "refId": "B",
+          "legendFormat": "p95",
+          "instant": false,
+          "range": true,
+          "interval": "1m"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(traces_spanmetrics_latency_bucket{cluster=~\"$environment\", service=~\"$service\", span_kind=~\"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER\"}[$__rate_interval])))",
+          "refId": "C",
+          "legendFormat": "p99",
+          "instant": false,
+          "range": true,
+          "interval": "1m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": true,
+            "axisSoftMin": 0,
+            "lineInterpolation": "smooth"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0,
+          "noValue": "No traces from your services yet",
+          "decimals": 3
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 13,
+      "type": "row",
+      "title": "Operations",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 32
+      },
+      "panels": []
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "Slowest operations, p95",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 33
+      },
+      "description": "The ten operations (span names) with the longest 95th-percentile duration, of the selected services.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "topk(10, histogram_quantile(0.95, sum by (service, span_name, le) (rate(traces_spanmetrics_latency_bucket{cluster=~\"$environment\", service=~\"$service\", span_kind=~\"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER\"}[$__rate_interval]))))",
+          "refId": "A",
+          "legendFormat": "{{service}} {{span_name}}",
+          "instant": false,
+          "range": true,
+          "interval": "1m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": true,
+            "axisSoftMin": 0,
+            "lineInterpolation": "smooth"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0,
+          "noValue": "No traces from your services yet",
+          "decimals": 3
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 15,
+      "type": "timeseries",
+      "title": "Failing operations",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 33
+      },
+      "description": "Failed requests per second of the ten operations that fail most.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gaas-mimir"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "gaas-mimir"
+          },
+          "expr": "topk(10, sum by (service, span_name) (rate(traces_spanmetrics_calls_total{cluster=~\"$environment\", service=~\"$service\", span_kind=~\"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER\", status_code=\"STATUS_CODE_ERROR\"}[$__rate_interval])))",
+          "refId": "A",
+          "legendFormat": "{{service}} {{span_name}}",
+          "instant": false,
+          "range": true,
+          "interval": "1m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": true,
+            "axisSoftMin": 0,
+            "lineInterpolation": "smooth"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0,
+          "noValue": "No traces from your services yet",
+          "decimals": 3
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    }
+  ]
+}
