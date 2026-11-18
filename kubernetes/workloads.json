@@ -186,7 +186,7 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "(count(kube_deployment_spec_replicas{cluster=~\"$environment\", namespace=~\"$namespace\", deployment=~\"$workload\"} ) or vector(0)) + (count(kube_statefulset_replicas{cluster=~\"$environment\", namespace=~\"$namespace\", statefulset=~\"$workload\"} ) or vector(0)) + (count(kube_daemonset_status_desired_number_scheduled{cluster=~\"$environment\", namespace=~\"$namespace\", daemonset=~\"$workload\"} ) or vector(0))",
+          "expr": "((count(kube_deployment_spec_replicas{cluster=~\"$environment\", namespace=~\"$namespace\", deployment=~\"$workload\"} ) or vector(0)) + (count(kube_statefulset_replicas{cluster=~\"$environment\", namespace=~\"$namespace\", statefulset=~\"$workload\"} ) or vector(0)) + (count(kube_daemonset_status_desired_number_scheduled{cluster=~\"$environment\", namespace=~\"$namespace\", daemonset=~\"$workload\"} ) or vector(0))) and on() (count(kube_pod_info{cluster=~\"$environment\", namespace=~\"$namespace\"}) > 0)",
           "refId": "A",
           "legendFormat": "All",
           "instant": true,
@@ -197,7 +197,7 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "(count(kube_deployment_spec_replicas{cluster=~\"$environment\", namespace=~\"$namespace\", deployment=~\"$workload\"} > kube_deployment_status_replicas_available{cluster=~\"$environment\", namespace=~\"$namespace\", deployment=~\"$workload\"}) or vector(0)) + (count(kube_statefulset_replicas{cluster=~\"$environment\", namespace=~\"$namespace\", statefulset=~\"$workload\"} > kube_statefulset_status_replicas_ready{cluster=~\"$environment\", namespace=~\"$namespace\", statefulset=~\"$workload\"}) or vector(0)) + (count(kube_daemonset_status_desired_number_scheduled{cluster=~\"$environment\", namespace=~\"$namespace\", daemonset=~\"$workload\"} > kube_daemonset_status_number_available{cluster=~\"$environment\", namespace=~\"$namespace\", daemonset=~\"$workload\"}) or vector(0))",
+          "expr": "((count(kube_deployment_spec_replicas{cluster=~\"$environment\", namespace=~\"$namespace\", deployment=~\"$workload\"} > kube_deployment_status_replicas_available{cluster=~\"$environment\", namespace=~\"$namespace\", deployment=~\"$workload\"}) or vector(0)) + (count(kube_statefulset_replicas{cluster=~\"$environment\", namespace=~\"$namespace\", statefulset=~\"$workload\"} > kube_statefulset_status_replicas_ready{cluster=~\"$environment\", namespace=~\"$namespace\", statefulset=~\"$workload\"}) or vector(0)) + (count(kube_daemonset_status_desired_number_scheduled{cluster=~\"$environment\", namespace=~\"$namespace\", daemonset=~\"$workload\"} > kube_daemonset_status_number_available{cluster=~\"$environment\", namespace=~\"$namespace\", daemonset=~\"$workload\"}) or vector(0))) and on() (count(kube_pod_info{cluster=~\"$environment\", namespace=~\"$namespace\"}) > 0)",
           "refId": "B",
           "legendFormat": "Short of pods",
           "instant": true,
@@ -233,8 +233,12 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "#4e80ee",
+                      "color": "text",
                       "value": null
+                    },
+                    {
+                      "color": "#4e80ee",
+                      "value": 0
                     }
                   ]
                 }
@@ -259,8 +263,12 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "green",
+                      "color": "text",
                       "value": null
+                    },
+                    {
+                      "color": "green",
+                      "value": 0
                     },
                     {
                       "color": "red",
@@ -317,7 +325,7 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "sum(kube_pod_container_status_waiting_reason{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-[bcdfghjklmnpqrstvwxz2456789]{6,10})?-[bcdfghjklmnpqrstvwxz2456789]{5}|($workload)-[0-9]+|($workload)\", reason=~\"CrashLoopBackOff|ImagePullBackOff|ErrImagePull|CreateContainerConfigError|CreateContainerError|InvalidImageName\"}) or vector(0)",
+          "expr": "(sum(kube_pod_container_status_waiting_reason{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-[bcdfghjklmnpqrstvwxz2456789]{6,10})?-[bcdfghjklmnpqrstvwxz2456789]{5}|($workload)-[0-9]+|($workload)\", reason=~\"CrashLoopBackOff|ImagePullBackOff|ErrImagePull|CreateContainerConfigError|CreateContainerError|InvalidImageName\"}) or vector(0)) and on() (count(kube_pod_info{cluster=~\"$environment\", namespace=~\"$namespace\"}) > 0)",
           "refId": "A",
           "instant": false,
           "range": true,
@@ -331,8 +339,12 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "text",
                 "value": null
+              },
+              {
+                "color": "green",
+                "value": 0
               },
               {
                 "color": "red",
@@ -384,7 +396,7 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "sum(increase(kube_pod_container_status_restarts_total{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-[bcdfghjklmnpqrstvwxz2456789]{6,10})?-[bcdfghjklmnpqrstvwxz2456789]{5}|($workload)-[0-9]+|($workload)\"}[1h])) or vector(0)",
+          "expr": "(sum(increase(kube_pod_container_status_restarts_total{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-[bcdfghjklmnpqrstvwxz2456789]{6,10})?-[bcdfghjklmnpqrstvwxz2456789]{5}|($workload)-[0-9]+|($workload)\"}[1h])) or vector(0)) and on() (count(kube_pod_info{cluster=~\"$environment\", namespace=~\"$namespace\"}) > 0)",
           "refId": "A",
           "instant": false,
           "range": true,
@@ -398,8 +410,12 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "text",
                 "value": null
+              },
+              {
+                "color": "green",
+                "value": 0
               },
               {
                 "color": "orange",
@@ -456,7 +472,7 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "sum(kube_pod_container_status_last_terminated_reason{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-[bcdfghjklmnpqrstvwxz2456789]{6,10})?-[bcdfghjklmnpqrstvwxz2456789]{5}|($workload)-[0-9]+|($workload)\", reason=\"OOMKilled\"}) or vector(0)",
+          "expr": "(sum(kube_pod_container_status_last_terminated_reason{cluster=~\"$environment\", namespace=~\"$namespace\", pod=~\"($workload)(-[bcdfghjklmnpqrstvwxz2456789]{6,10})?-[bcdfghjklmnpqrstvwxz2456789]{5}|($workload)-[0-9]+|($workload)\", reason=\"OOMKilled\"}) or vector(0)) and on() (count(kube_pod_info{cluster=~\"$environment\", namespace=~\"$namespace\"}) > 0)",
           "refId": "A",
           "instant": false,
           "range": true,
@@ -470,8 +486,12 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "text",
                 "value": null
+              },
+              {
+                "color": "green",
+                "value": 0
               },
               {
                 "color": "orange",
@@ -523,7 +543,7 @@
             "type": "prometheus",
             "uid": "gaas-mimir"
           },
-          "expr": "sum(kube_job_failed{cluster=~\"$environment\", namespace=~\"$namespace\", job_name=~\"($workload)(-.*)?\", condition=\"true\"}) or vector(0)",
+          "expr": "(sum(kube_job_failed{cluster=~\"$environment\", namespace=~\"$namespace\", job_name=~\"($workload)(-.*)?\", condition=\"true\"}) or vector(0)) and on() (count(kube_pod_info{cluster=~\"$environment\", namespace=~\"$namespace\"}) > 0)",
           "refId": "A",
           "instant": false,
           "range": true,
@@ -537,8 +557,12 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "text",
                 "value": null
+              },
+              {
+                "color": "green",
+                "value": 0
               },
               {
                 "color": "orange",
@@ -617,8 +641,12 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#4e80ee",
+                "color": "text",
                 "value": null
+              },
+              {
+                "color": "#4e80ee",
+                "value": 0
               }
             ]
           },
@@ -914,7 +942,7 @@
               "type": "auto"
             }
           },
-          "noValue": "Nothing to look at."
+          "noValue": "Nothing to look at, or no kube-state-metrics data has arrived yet."
         },
         "overrides": [
           {
@@ -1484,7 +1512,7 @@
           },
           "min": 0,
           "max": 1,
-          "noValue": "Nothing throttled, or no cAdvisor data"
+          "noValue": "No throttling seen, or no cAdvisor data has arrived yet."
         },
         "overrides": []
       },
@@ -1552,7 +1580,7 @@
           },
           "min": 0,
           "decimals": 0,
-          "noValue": "No restarts"
+          "noValue": "No restarts, or no kube-state-metrics data has arrived yet."
         },
         "overrides": []
       },
