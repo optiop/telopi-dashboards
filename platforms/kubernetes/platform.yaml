@@ -69,9 +69,10 @@ steps:
         --set 'alloy.envFrom[0].secretRef.name=telopi-alloy'
   - title: Check that it arrived
     text: >-
-      Alloy should be rolled out and log no error. Within two minutes Connect
-      in the portal says Receiving data, and the Kubernetes dashboards in your
-      Grafana fill. A 401 in the log is a wrong username or password.
+      Alloy should be rolled out and log no error. Within two minutes the See
+      it arrive section, below, shows Arriving for metrics, and the Kubernetes
+      dashboards in your Grafana fill. A 401 in the log is a wrong
+      username or password.
     language: bash
     code: |
       kubectl --namespace telopi rollout status deployment/alloy

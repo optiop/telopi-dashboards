@@ -3,6 +3,11 @@
 Each cluster's nodes, pods and workloads, and what keeps them from running,
 from an Alloy that runs in the cluster.
 
+**To install it, go to Connect > Kubernetes in the Telopi portal.** It walks
+you through each step with your ingest key and environment filled in, and
+shows when the data arrives. The snippet on this page is for a cluster that
+already runs Alloy.
+
 ## What it collects
 
 Once a minute:
@@ -27,20 +32,38 @@ to the same Alloy, or run it on each node.
 
 ## What you need
 
-- **kube-state-metrics** in the cluster, with the label
-  `app.kubernetes.io/name=kube-state-metrics` and a port named `http`, as its
-  Helm chart installs it:
-  `helm install kube-state-metrics prometheus-community/kube-state-metrics -n kube-system`.
-- **Alloy in the cluster**, one replica, from Grafana's Helm chart
-  (`helm install alloy grafana/alloy`), with this snippet as its
-  configuration (`alloy.configMap.content`). Its service account may `get`,
-  `list` and `watch` nodes, endpoints, services and pods, and `get`
-  `nodes/proxy` and `nodes/metrics`; the chart's default role allows these.
-- **An ingest key** from the Ingest keys page of the Telopi portal. Its
-  username is in the snippet; put its password in a Secret and give it to
-  Alloy as the environment variable `TELOPI_PASSWORD`
-  (`alloy.extraEnv` with `valueFrom.secretKeyRef`).
-- The cluster's name for `ENVIRONMENT`, as you call it in Telopi.
+Connect > Kubernetes sets up all of this, in the namespace `telopi`, from a
+machine with `kubectl` and Helm pointed at the cluster:
+
+1. **The Helm charts** of kube-state-metrics (`prometheus-community`) and
+   Alloy (`grafana`).
+2. **kube-state-metrics** in the namespace `telopi`:
+   `helm upgrade --install kube-state-metrics prometheus-community/kube-state-metrics --namespace telopi`.
+   The snippet finds it by the label
+   `app.kubernetes.io/name=kube-state-metrics` and its port named `http`, as
+   the chart sets them, in any namespace.
+3. **Your ingest key's password in a Secret**, `telopi-alloy`, as
+   `TELOPI_PASSWORD`. The step asks for the password, so it is in no command
+   and not in your shell's history. The key's username is in the snippet.
+4. **Alloy's configuration in a ConfigMap**, `telopi-alloy`, under the key
+   `config.alloy`: the snippet, with the cluster's name as `ENVIRONMENT`, as
+   you call it in Telopi.
+5. **Alloy**, one replica (`controller.type=deployment`,
+   `controller.replicas=1`), from Grafana's chart, reading that ConfigMap
+   (`alloy.configMap.create=false`, `alloy.configMap.name=telopi-alloy`,
+   `alloy.configMap.key=config.alloy`) and that Secret
+   (`alloy.envFrom[0].secretRef.name=telopi-alloy`). Its service account may
+   `get`, `list` and `watch` nodes, endpoints, services and pods, which the
+   chart's role allows, and `get` `nodes/proxy`, which the chart does not: a
+   ClusterRole `telopi-alloy-kubelet` bound to `telopi:alloy` adds it.
+
+Connect's last step, See it arrive, shows Arriving for metrics within two
+minutes, and the Kubernetes dashboards fill.
+
+**If Alloy already runs in your cluster**, add the snippet above to its
+configuration instead, with `TELOPI_PASSWORD` in its environment and
+kube-state-metrics installed as in step 2. Its service account needs the same
+permissions, `nodes/proxy` included.
 
 Grafana's Kubernetes monitoring Helm chart (`k8s-monitoring`) sends the same
 metrics, and works too: give its destination your ingest address and key,

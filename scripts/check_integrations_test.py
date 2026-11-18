@@ -205,7 +205,7 @@ PLATFORM = {
          "code": "sudo bash -s <<'TELOPI'\nread -rsp 'Password: ' TELOPI_PASSWORD </dev/tty\n"
                  "cat > /etc/alloy/config.alloy <<'ALLOY'\n${SNIPPET}\nALLOY\n"
                  "printf \"TELOPI_PASSWORD='%s'\\n\" \"$TELOPI_PASSWORD\" > /etc/default/alloy\nTELOPI\n"},
-        {"title": "Check that it arrived", "text": "Connect says Receiving data.", "language": "bash",
+        {"title": "Check that it arrived", "text": "See it arrive shows Arriving.", "language": "bash",
          "code": "systemctl is-active alloy\n"},
     ],
 }
@@ -277,6 +277,9 @@ class Platforms(unittest.TestCase):
 
     def test_the_last_step_says_whether_it_arrived(self):
         self.place(dict(PLATFORM, steps=PLATFORM["steps"][:1]))
+        self.assertTrue(any("its last step, titled Check" in f for f in self.problems()))
+        old = dict(PLATFORM["steps"][1], text="Connect says Receiving data.")
+        self.place(dict(PLATFORM, steps=[PLATFORM["steps"][0], old]))
         self.assertTrue(any("its last step, titled Check" in f for f in self.problems()))
         query = dict(PLATFORM["steps"][1], text="Ask the stack.", code="curl ${INGEST_URL}/mimir/prometheus/api/v1/query\n")
         self.place(dict(PLATFORM, steps=[PLATFORM["steps"][0], query]))

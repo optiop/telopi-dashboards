@@ -1,5 +1,6 @@
-# Website: browser telemetry (Faro) from each visitor's browser, which Telopi
-# turns on for the customer's sites; the snippet goes into their pages.
+# Website: browser telemetry (Faro) from each visitor's browser. An owner or
+# admin adds the customer's sites on the portal's Website page, which shows the
+# snippet for their pages; no Alloy, so install is telopi (no snippet here).
 id: website
 name: Website
 category: website
