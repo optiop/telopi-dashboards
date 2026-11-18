@@ -3,7 +3,7 @@
 # the password in a Secret.
 id: kubernetes
 name: Kubernetes
-description: Any Kubernetes cluster, EKS, GKE, AKS or your own. Helm installs kube-state-metrics and one Alloy that sends its nodes, pods and workloads.
+description: Any Kubernetes cluster, EKS, GKE, AKS or your own. Helm installs kube-state-metrics and one Alloy that sends its nodes, pods and workloads, and the pods' logs.
 status: ready
 guide: integrations/kubernetes/README.md
 collects: [kubernetes]
@@ -52,8 +52,9 @@ steps:
     text: >-
       One Alloy for the whole cluster: it reaches each node's kubelet and
       cAdvisor through the API server's proxy, so its service account also
-      gets nodes/proxy, which the chart does not give. It reloads the
-      ConfigMap when it changes.
+      gets nodes/proxy, which the chart does not give. It reads the pods'
+      logs through the API server too, which the chart's role allows. It
+      reloads the ConfigMap when it changes.
     language: bash
     code: |
       kubectl create clusterrole telopi-alloy-kubelet --verb=get --resource=nodes/proxy \
@@ -71,7 +72,9 @@ steps:
     text: >-
       Alloy should be rolled out and log no error. Within two minutes Connect
       in the portal says Receiving data, and the Kubernetes dashboards in your
-      Grafana fill. A 401 in the log is a wrong username or password.
+      Grafana fill. Receiving data counts the metrics only: to see the pods'
+      logs, open Explore, pick Loki and query {cluster="production"} with your
+      cluster's name. A 401 in the log is a wrong username or password.
     language: bash
     code: |
       kubectl --namespace telopi rollout status deployment/alloy

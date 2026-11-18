@@ -1,10 +1,10 @@
 # Kubernetes: a cluster's workloads and nodes, from kube-state-metrics, the
-# kubelets and cAdvisor, through an Alloy in the cluster.
+# kubelets and cAdvisor, and its pods' logs, through an Alloy in the cluster.
 id: kubernetes
 name: Kubernetes
 category: infrastructure
-description: Nodes, pods and workloads of each cluster, with alerts for crash loops, pods short, memory kills and full volumes.
-signals: [metrics]
+description: Nodes, pods and workloads of each cluster, and the pods' logs, with alerts for crash loops, pods short, memory kills and full volumes.
+signals: [metrics, logs]
 check:
   datasource: mimir
   query: group(max_over_time(kube_node_info[1h]))

@@ -1,7 +1,7 @@
 # Kubernetes
 
-Each cluster's nodes, pods and workloads, and what keeps them from running,
-from an Alloy that runs in the cluster.
+Each cluster's nodes, pods and workloads, what keeps them from running, and
+the logs of every pod, from an Alloy that runs in the cluster.
 
 ## What it collects
 
@@ -15,12 +15,21 @@ Once a minute:
   memory in use and network traffic. Only these, to keep the series few.
 - **The kubelet**: how full each persistent volume is.
 
-Every series carries the cluster's name in the `cluster` label, which is the
-environment's name in Telopi. The **Kubernetes: clusters** dashboard has one
-row per environment (nodes, pods, restarts, CPU and memory requested and
-used) and what is wrong now; **Kubernetes: workloads** has each workload with
-its pods, containers that cannot start or ran out of memory, and CPU and
-memory against requests and limits.
+And as they are written:
+
+- **Logs** of every container of every pod, with the labels `namespace`,
+  `pod`, `container` and `app` (the pod's `app.kubernetes.io/name` label,
+  else its `app` label, else the container's name). Loki takes `app` as the
+  service's name, so the alert for a service that logs many errors covers
+  each app. Find them in Grafana's Explore, under Loki, with
+  `{cluster="production", namespace="shop"}`.
+
+Every series and every log line carries the cluster's name in the `cluster`
+label, which is the environment's name in Telopi. The **Kubernetes:
+clusters** dashboard has one row per environment (nodes, pods, restarts, CPU
+and memory requested and used) and what is wrong now; **Kubernetes:
+workloads** has each workload with its pods, containers that cannot start or
+ran out of memory, and CPU and memory against requests and limits.
 
 For the nodes themselves (CPU, memory, disks), add the Machines integration
 to the same Alloy, or run it on each node.
@@ -35,7 +44,16 @@ to the same Alloy, or run it on each node.
   (`helm install alloy grafana/alloy`), with this snippet as its
   configuration (`alloy.configMap.content`). Its service account may `get`,
   `list` and `watch` nodes, endpoints, services and pods, and `get`
-  `nodes/proxy` and `nodes/metrics`; the chart's default role allows these.
+  `nodes/proxy`, `nodes/metrics` and `pods/log`; the chart's default role
+  allows all but `nodes/proxy`, which the Connect steps add.
+- **One Alloy reads every pod's logs through the API server**
+  (`loki.source.kubernetes`), not from the nodes' disks, so it runs as a
+  Deployment with one replica and needs no host paths. That suits small and
+  medium clusters. On a large or busy one, run Alloy as a DaemonSet that
+  reads `/var/log/pods` on each node instead. Alloy keeps how far it has read
+  on its own disk, which the chart does not keep, so after a restart it reads
+  each pod's logs again from the start of what Kubernetes keeps. Loki drops
+  the lines it already has; you may see a short burst of older lines.
 - **An ingest key** from the Ingest keys page of the Telopi portal. Its
   username is in the snippet; put its password in a Secret and give it to
   Alloy as the environment variable `TELOPI_PASSWORD`
@@ -43,8 +61,8 @@ to the same Alloy, or run it on each node.
 - The cluster's name for `ENVIRONMENT`, as you call it in Telopi.
 
 Grafana's Kubernetes monitoring Helm chart (`k8s-monitoring`) sends the same
-metrics, and works too: give its destination your ingest address and key,
-and its `cluster.name` the environment's name.
+metrics and logs, and works too: give its destination your ingest address
+and key, and its `cluster.name` the environment's name.
 
 ## Alerts
 
