@@ -33,6 +33,7 @@ data-plane release. Until then, a change here must also be made there.
 | [`uptime/`](uptime) | Uptime: which checked sites are up, their availability and response time | Telopi checks their sites |
 | [`nodes/`](nodes) | Machines: CPU, load, memory, disks and network of each machine, one row per machine and graphs over time | always: every customer's Grafana has it, and it fills once their machines send the Prometheus node exporter's metrics or Alloy's unix exporter's (Alloy's Kubernetes monitoring includes it) |
 | [`kubernetes/`](kubernetes) | Kubernetes: clusters (one row per environment: nodes, pods, restarts, CPU and memory requested and used; problems now, namespaces, nodes, volumes) and Kubernetes: workloads (each Deployment, StatefulSet and DaemonSet with the pods it wants and has, containers that cannot start or ran out of memory, CPU and memory against requests and limits, jobs) | always: every customer's Grafana has it, and it fills once a cluster sends kube-state-metrics (and, for usage, cAdvisor's and the kubelet's metrics), as Grafana's Kubernetes monitoring chart and Alloy send them |
+| [`traces/`](traces) | Services: each service's requests per second, the share that fail and its duration (p50, p95, p99), with its slowest and most-failing operations, from the span metrics Telopi writes from their traces. A service is its OpenTelemetry `service.name`; its environment is the resource attribute `deployment.environment.name` (`OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=<name>`), which the platform writes as the `cluster` label | always, and it fills once a service sends traces |
 | [`postgresql/`](postgresql) | PostgreSQL: servers up, connections against `max_connections`, transactions, rows, cache hit ratio, deadlocks, locks, the longest transaction and each database's size | always, and it fills once Alloy's postgres exporter sends (the PostgreSQL integration) |
 | [`redis/`](redis) | Redis: instances up, clients, memory against `maxmemory`, commands per second, hit ratio, the busiest and slowest commands, evictions and keys | always, and it fills once Alloy's redis exporter sends (the Redis integration) |
 | [`nginx/`](nginx) | Nginx: servers up, requests per second and per connection, connections by state, dropped connections | always, and it fills once the NGINX Prometheus exporter sends (the Nginx integration) |
@@ -44,7 +45,9 @@ data-plane release. Until then, a change here must also be made there.
 
 An **environment** is a Kubernetes cluster, or any machines, that send to the
 customer's one Grafana under one name: the `cluster` label Alloy sets, which is
-the name the customer gives it in the Telopi portal. A dashboard whose data has
+the name the customer gives it in the Telopi portal. For traces it is the
+resource attribute `deployment.environment.name`, which the platform's Tempo
+writes into the span metrics as the same `cluster` label. A dashboard whose data has
 it starts with an *Environment* variable over it, All by default; a series
 without the label still shows under All.
 
